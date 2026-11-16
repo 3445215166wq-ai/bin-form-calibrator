@@ -52,3 +52,6 @@ desktop.ini
 .dsh-meow/
 .dsh/
 *.log
+
+# 本地的操盘笔记 / 视频脚本，不公开
+/docs/
