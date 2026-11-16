@@ -5,7 +5,7 @@
 A single-file meme toy: **drag the slider to dial "how much bin"** — seven forms of a League of Legends
 top laner, from a champion skin all the way to a trophy lift and a power-up finale.
 
-Single static page. No framework, no build step, no audio assets, no network calls.
+Single static page. No framework, no build step, no network calls, and a single 59 KB audio file.
 
 > **Live demo** — https://3445215166wq-ai.github.io/bin-form-calibrator/
 > (a China-optimized mirror runs on Tencent CloudBase: https://binform-d0g0vgl1rde2f7fde-1533757942.tcloudbaseapp.com/)
@@ -21,7 +21,7 @@ Single static page. No framework, no build step, no audio assets, no network cal
 - **One-tap share card.** Generates a 900×1200 framed image plus a copyable deep link. The QR code in the
   corner is **computed in the page** by a hand-written encoder (Reed-Solomon, format info, automatic mask
   selection) — no QR service, no library, and it doesn't taint the canvas, so export keeps working.
-- **Almost all audio is synthesized** — exactly one 48 KB audio file. Tier blips are WebAudio oscillators, and the final tier is a **formant-synthesized sung "aah"** (sawtooth glottal source + vibrato + three vowel formants + a generated impulse-response reverb). The trophy tiers add a real stadium crowd from a **CC0** recording (see `LICENSE-ASSETS`).
+- **Almost all audio is synthesized** — exactly one 59 KB audio file. Tier blips are WebAudio oscillators, and the final tier is a **formant-synthesized sung "aah"** (sawtooth glottal source + vibrato + three vowel formants + a generated impulse-response reverb). The three "trophy" tiers (FMVP / champion / final form) add a real stadium crowd taken from an **NFL Arrowhead Stadium** field recording (**CC BY-SA 4.0**, credited in `LICENSE-ASSETS`).
 - **Easter egg:** type `bin`, or long-press the title for 0.7 s.
 - Haptic feedback on mobile via `navigator.vibrate` (no toggle — it's always on).
 

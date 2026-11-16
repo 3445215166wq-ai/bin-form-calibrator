@@ -36,10 +36,11 @@
 ## 音频素材
 
 `assets/crowd.mp3` —— 截取自 Wikimedia Commons 的录音
-**"360703 eguobyte large-crowd-medium-distance-stereo.wav"**，
-作者 **eguobyte**，授权 **CC0 1.0（公有领域贡献，无需署名，此处仍注明来源）**。
-来源：https://commons.wikimedia.org/wiki/File:360703_eguobyte_large-crowd-medium-distance-stereo.wav
+**"Arrowhead Stadium crowd noise.wav"**（NFL 箭头体育场现场人群声），
+作者 **Kj1595**，授权 **CC BY-SA 4.0**。
+来源：https://commons.wikimedia.org/wiki/File:Arrowhead_Stadium_crowd_noise.wav
 
-处理方式：截取最热闹的 6 秒 → 单声道 44.1kHz → mp3 64kbps（48KB）→ 首尾 0.25s 淡变以便无缝循环 → 电平归一化。
+处理方式：截取起伏最明显的 6 秒（原文件 7s 起）→ 单声道 44.1kHz → mp3 80kbps（59KB）→ 首尾 0.3s 淡变以便无缝循环 → 电平归一化到 -18 dB。
+⚠️ **该文件本身按 CC BY-SA 4.0 提供**（这是它的原许可要求），不受本仓库其他素材"禁商用"声明约束；如需商用请遵守 CC BY-SA 4.0 并保留上述署名。
 
 其余音效（档位音阶、圣光「啊」、隐藏档低频）均为 WebAudio 现场合成，**不含任何音频文件**。

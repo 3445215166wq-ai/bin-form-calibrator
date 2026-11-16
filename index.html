@@ -1692,7 +1692,7 @@ var QRLib = (function () {
      ⚠️ 只在「夺冠！意气风发！」(5) 和「贾科斯」(6) 两档响，离开档位立刻淡出。
      之前那版是"噪声带通"合成的假人群，听感是海浪，且全程循环 —— 用户点名太吵，已废弃。 */
   const CROWD_SRC = "assets/crowd.mp3";
-  const CROWD_FROM = 5;              /* 0 起：5 = 夺冠，6 = 贾科斯 */
+  const CROWD_TIERS = [3, 5, 6];     /* 0 起：3=先锋赛冠军，5=夺冠捧杯，6=贾科斯 —— 只有"拿杯"的这几档有人声 */
   const CROWD_VOL = 0.22;
   let crowdBuf = null, crowdLoading = false, crowdSrc = null, crowdGain = null, wantCrowd = false;
 
@@ -1745,7 +1745,7 @@ var QRLib = (function () {
 
   /* 只在高档位响：换档、切音效开关时调用 */
   function updateCrowd() {
-    wantCrowd = pref.sound && currentTier() >= CROWD_FROM;
+    wantCrowd = pref.sound && CROWD_TIERS.indexOf(currentTier()) >= 0;
     if (wantCrowd) crowdOn(); else crowdOff();
   }
 
