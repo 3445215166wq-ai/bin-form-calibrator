@@ -1685,100 +1685,6 @@ var QRLib = (function () {
     if (navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) {} }
   }
 
-  /* ================= 人声鼎沸（开弹幕时的人群底噪，全部现场合成） =================
-     一层噪声 → 三组带通（模拟不同音色的人声频段）→ 各自挂一个慢速 LFO 调音量，
-     叠起来就像"很多人在说话、此起彼伏"。总音量压得很低，是背景不是主角。 */
-  const CROWD_VOL = 0.22;
-  let crowdBuf = null, crowdNodes = null, crowdGain = null;
-
-  function makeCrowdBuffer(ac) {
-    const sr = ac.sampleRate, dur = 3.2, n = Math.floor(sr * dur);
-    const buf = ac.createBuffer(1, n, sr);
-    const d = buf.getChannelData(0);
-    let s = 987654321;
-    const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
-    let lp = 0;
-    for (let i = 0; i < n; i++) {
-      const w = rnd() * 2 - 1;
-      lp += (w - lp) * 0.18;                 /* 一阶低通，削掉刺耳的"沙" */
-      const t = i / sr;
-      /* 三条不同频率的慢速起伏，叠出"人潮涨落" */
-      const m =
-        0.5 +
-        0.32 * Math.sin(2 * Math.PI * 0.37 * t) +
-        0.20 * Math.sin(2 * Math.PI * 0.61 * t + 1.7) +
-        0.14 * Math.sin(2 * Math.PI * 0.93 * t + 3.1);
-      d[i] = lp * Math.max(0.08, m);
-    }
-    /* 首尾交叉淡化，循环不爆音 */
-    const fade = Math.floor(sr * 0.25);
-    for (let i = 0; i < fade; i++) {
-      const k = i / fade;
-      d[i] = d[i] * k + d[n - fade + i] * (1 - k);
-    }
-    return buf;
-  }
-
-  function startCrowd() {
-    const ac = audioCtx();
-    if (!ac || crowdNodes) return;
-    if (!crowdBuf) crowdBuf = makeCrowdBuffer(ac);
-    const now = ac.currentTime;
-    const master = ac.createGain();
-    master.gain.setValueAtTime(0.0001, now);
-    master.gain.exponentialRampToValueAtTime(CROWD_VOL, now + 1.6);   /* 慢淡入 */
-    master.connect(masterBus(ac).input);
-    crowdGain = master;
-    crowdNodes = [master];
-    [
-      { f: 430, q: 0.85, lfo: 0.31, depth: 0.5, g: 0.60 },
-      { f: 820, q: 1.05, lfo: 0.53, depth: 0.45, g: 0.50 },
-      { f: 1550, q: 1.30, lfo: 0.79, depth: 0.40, g: 0.35 }
-    ].forEach(p => {
-      const src = ac.createBufferSource();
-      src.buffer = crowdBuf;
-      src.loop = true;
-      src.playbackRate.value = 0.88 + Math.random() * 0.24;   /* 三组速率错开 */
-      const flt = ac.createBiquadFilter();
-      flt.type = "bandpass"; flt.frequency.value = p.f; flt.Q.value = p.q;
-      const g = ac.createGain(); g.gain.value = p.g;
-      const lfo = ac.createOscillator(); lfo.type = "sine"; lfo.frequency.value = p.lfo;
-      const lg = ac.createGain(); lg.gain.value = p.depth * p.g;
-      lfo.connect(lg); lg.connect(g.gain);
-      src.connect(flt); flt.connect(g); g.connect(master);
-      src.start(now + Math.random() * 0.25);
-      lfo.start();
-      crowdNodes.push(src, lfo, flt, g, lg);
-    });
-  }
-
-  function stopCrowd() {
-    if (!crowdNodes) return;
-    const nodes = crowdNodes;
-    crowdNodes = null;
-    const now = actx ? actx.currentTime : 0;
-    try {
-      if (crowdGain && actx) {
-        crowdGain.gain.cancelScheduledValues(now);
-        crowdGain.gain.setValueAtTime(Math.max(crowdGain.gain.value, 0.0002), now);
-        crowdGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);   /* 慢淡出 */
-      }
-    } catch (e) {}
-    crowdGain = null;
-    setTimeout(() => {
-      nodes.forEach(nd => {
-        try { if (nd.stop) nd.stop(); } catch (e) {}
-        try { nd.disconnect(); } catch (e) {}
-      });
-    }, 650);
-  }
-
-  /* 弹幕开 + 音效开 → 才有人声鼎沸（🔊 仍是总声音开关） */
-  function updateCrowd() {
-    if (pref.danmu && pref.sound) startCrowd();
-    else stopCrowd();
-  }
-
   /* ================= 弹幕 ================= */
   const danmuEl = document.getElementById("danmu");
   const DANMU = [
@@ -1941,21 +1847,17 @@ var QRLib = (function () {
     pref.sound = !pref.sound;
     paintToggles();
     if (pref.sound) blip(currentTier());
-    updateCrowd();                    // 音效是总声音开关，关掉也把人声停掉
   });
   tgDanmu.addEventListener("click", () => {
     pref.danmu = !pref.danmu;
     paintToggles();
     danmuLoop();
     if (!pref.danmu) danmuEl.innerHTML = "";
-    updateCrowd();                    // 开弹幕才有人声鼎沸
   });
   paintToggles();
   danmuLoop();
-  updateCrowd();
 
   /* 浏览器要求有用户手势才能出声：第一次按下后再补一次，避免"读档时弹幕已开但没声音" */
-  window.addEventListener("pointerdown", () => { updateCrowd(); }, { once: true });
 
   /* ================= 档位切换时的反馈：音阶 + 震动 + 一条弹幕 ================= */
   function onTierChange(tier) {
