@@ -1,6 +1,9 @@
 [CmdletBinding()]
 param(
-  [string]$In = ".\assets",
+  # Raw PNGs were archived into old/source-assets/ when the folder was tidied up.
+  # Pass -In explicitly if you keep them somewhere else.
+  # NOTE: keep this file pure ASCII - Windows PowerShell 5.1 reads .ps1 as ANSI.
+  [string]$In = ".\old\source-assets",
   [string]$Out = ".\assets\opt",
   [string]$MapFile = ".\tools\tiers.json",
   [int]$Width = 900,

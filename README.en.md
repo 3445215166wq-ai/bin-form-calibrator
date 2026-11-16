@@ -37,7 +37,7 @@ node tools/serve.js 8099     # then open http://127.0.0.1:8099/
 ## Deploying your own
 
 ```bash
-# Assemble dist/ (only the files needed at runtime, ~7.5 MB)
+# Assemble dist/ (only the files needed at runtime, ~7.6 MB)
 pwsh tools/build-dist.ps1
 
 # e.g. Tencent CloudBase static hosting
@@ -73,13 +73,20 @@ which is why scrubbing feels continuous.
 
 ```
 index.html          # the entire app, including the hand-written QR encoder
-assets/
+assets/             # runtime media only — nothing extra ships
   evolution.mp4     # the stitched 7-form video (720x960, 24 fps, 24.9 s, 4.81 MB)
+  crowd.mp3         # stadium crowd recording (59 KB, CC BY-SA 4.0)
   opt/              # compressed stills (fallback mode ?img=1)
   frames/           # sprite sequence (fallback mode ?frames=1)
   share.png         # Open Graph cover
 tools/              # build scripts + a pile of CDP verification scripts
+old/                # archived prototypes & raw source media (gitignored, not built)
+docs/               # video script & publishing plan (gitignored)
 ```
+
+`old/` keeps the history instead of deleting it: the early prototypes, an old packaged build, and the
+raw source media (5 original PNGs + 5 source clips, 11.2 MB). To re-derive the compressed stills:
+`pwsh tools/optimize.ps1 -In ./old/source-assets -Out ./assets/opt`.
 
 ## Notes from building it
 

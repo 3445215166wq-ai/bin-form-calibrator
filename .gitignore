@@ -1,29 +1,19 @@
-# ---- 运行时必需：进仓库 ----
+# ---------------------------------------------------------------------------
+# 进仓库的（运行必需）
 #   index.html
-#   assets/evolution.mp4          （拼好的成片，4.81MB）
-#   assets/share.png              （OG 封面）
-#   assets/skin-gwen.jpg / skin-jax.jpg
-#   assets/opt/*.jpg              （5 张压缩档位图，跑 ?img=1 用）
-#   assets/frames/*.jpg           （11 张帧序列，跑 ?frames=1 用）
-#   tools/                        （打包与验证脚本）
+#   assets/evolution.mp4   拼好的七档演变成片（4.81MB）
+#   assets/crowd.mp3       体育馆人声（CC BY-SA 4.0，署名见 LICENSE-ASSETS）
+#   assets/share.png       OG 封面
+#   assets/skin-gwen.jpg / assets/skin-jax.jpg
+#   assets/opt/*.jpg       5 张压缩档位静帧（?img=1 兜底用）
+#   assets/frames/*.jpg    11 张帧序列（?frames=1 兜底用）
+#   tools/                 打包与验证脚本
+#   .github/               Pages 自动部署
+# ---------------------------------------------------------------------------
 
-# ---- 源素材：本地留着，不进仓库 ----
-# 原始大 PNG（11MB+，只作兜底，运行时走 assets/opt）
-assets/bin大小姐.png
-assets/稚嫩bin哥.png
-assets/先锋赛冠军.png
-assets/反思后成熟的bin哥 .png
-assets/夺冠了！意气风发！.png
-
-# 五个源视频（拼成 evolution.mp4 的原料）
-assets/视频 (1).mp4
-assets/视频2.mp4
-assets/视频3.mp4
-assets/视频4.mp4
-assets/视频5.mp4
-
-# A/B 对比用的备选成片
-assets/evolution-motion.mp4
+# ---- 本地归档：早期原型、源素材、一次性脚本、旧构建产物 ----
+# 详见 old/README.md。这些都不参与运行，不需要进仓库。
+old/
 
 # ---- 构建产物 ----
 dist/
@@ -53,5 +43,5 @@ desktop.ini
 .dsh/
 *.log
 
-# 本地的操盘笔记 / 视频脚本，不公开
+# ---- 本地操盘笔记 / 视频脚本 / 一次性小工具 ----
 /docs/
