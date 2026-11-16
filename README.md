@@ -64,7 +64,8 @@ tools/                # 打包脚本 + 一堆 CDP 验证脚本（浏览器端行
 - 托管：**腾讯云开发 CloudBase 静态网站托管**
 - 环境：`binform-d0g0vgl1rde2f7fde`（地域 ap-shanghai，体验版免费，3000 资源点/月，到期 2027-05-16）
 - 默认域名是腾讯已备案的 `*.tcloudbaseapp.com`，**国内可直连，不需要自己备案**
-- 旧的 Netlify 地址 `https://illustrious-praline-5f50b9.netlify.app` 仍在线，可当海外镜像
+- GitHub Pages 镜像：**https://3445215166wq-ai.github.io/bin-form-calibrator/**（push 到 `main` 自动部署，海外访问用这个）
+- Netlify 镜像：`https://illustrious-praline-5f50b9.netlify.app`（手动拖 `dist` 更新，注意它不会自动跟随仓库）
 
 ### 改完怎么发布
 
