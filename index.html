@@ -1,0 +1,1969 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b0d13">
+<title>bin 氏滑动变阻器 · 七种形态</title>
+<meta name="description" content="拖动滑片，把 bin 哥从格温拖到贾科斯：七种形态的滑动变阻器。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="bin 氏滑动变阻器 · 七种形态">
+<meta property="og:description" content="拖动滑片，把 bin 哥从格温拖到贾科斯。">
+<meta property="og:image" content="https://binform-d0g0vgl1rde2f7fde-1533757942.tcloudbaseapp.com/assets/share.png">
+<meta property="og:url" content="https://binform-d0g0vgl1rde2f7fde-1533757942.tcloudbaseapp.com/">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+  :root{
+    --bg:#0b0d13;
+    --ink:#eef3ff;
+    --muted:#818da6;
+    --gold:#ffca4d;
+    --line:rgba(160,185,235,.16);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0;min-height:100%;
+    display:flex;justify-content:center;
+    padding:clamp(22px,6vh,58px) 18px 34px;
+    font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(90% 55% at 50% 0%, #1a2236 0%, transparent 62%),
+      radial-gradient(70% 50% at 50% 105%, rgba(255,202,77,.10) 0%, transparent 60%),
+      var(--bg);
+  }
+  .wrap{width:100%;max-width:430px;display:flex;flex-direction:column;align-items:center}
+  /* 关键：纵向 flex 容器里的子元素一律不许被压缩，否则高度会被 flex-shrink 吃掉
+     （.stage 的 aspect-ratio、.rheostat 的刻度定位都会因此错乱） */
+  .wrap > *{flex:0 0 auto}
+
+  .eyebrow{
+    margin:0 0 9px;font-size:10.5px;letter-spacing:.3em;color:var(--muted);
+    font-family:Arial,sans-serif;font-weight:700;
+  }
+  h1{margin:0;font-size:clamp(21px,5.6vw,27px);font-weight:800;letter-spacing:.04em}
+  h1 em{font-style:normal;color:var(--gold)}
+  .intro{margin:9px 0 20px;font-size:12.5px;color:var(--muted);letter-spacing:.06em}
+
+  /* ---------- 舞台 ---------- */
+  .stage{
+    position:relative;width:100%;aspect-ratio:4/5;
+    flex:0 0 auto;                    /* 关键：否则在纵向 flex 里会被压扁，aspect-ratio 失效 */
+    border-radius:18px;overflow:hidden;
+    background:#0e1219;border:1px solid var(--line);
+    box-shadow:0 30px 70px -34px #000;
+    user-select:none;
+    transform:translateZ(0);          /* 独立合成层，避免整页重绘 */
+  }
+  #layers{position:absolute;inset:0;z-index:1}
+  #layers img{
+    position:absolute;inset:0;width:100%;height:100%;
+    object-fit:cover;object-position:50% 45%;
+    opacity:0;
+    backface-visibility:hidden;
+    -webkit-user-drag:none;user-select:none;
+  }
+  .stage.anim #layers img{transition:opacity 150ms linear}
+
+  /* 视频模式：视频藏在画面外，只把解码出来的当前帧画到 canvas */
+  #cv{position:absolute;inset:0;z-index:1;width:100%;height:100%;display:none}
+  .stage.video #cv{display:block}
+  .stage.video #layers{display:none}
+  #vid{position:absolute;left:-9999px;top:0;width:2px;height:2px;opacity:0;pointer-events:none}
+  .stage::after{
+    content:"";position:absolute;inset:auto 0 0 0;height:34%;pointer-events:none;z-index:2;
+    background:linear-gradient(180deg,transparent,rgba(4,6,11,.86));
+  }
+  .tag{
+    position:absolute;left:14px;bottom:13px;z-index:3;
+    display:flex;align-items:center;gap:9px;
+    font-size:12px;font-weight:700;letter-spacing:.04em;
+    text-shadow:0 1px 6px rgba(0,0,0,.9);
+  }
+  .tag i{flex:0 0 11px;width:11px;height:1px;background:var(--gold);display:block;opacity:.9}
+  /* 高清素材（视频）还在下载时给个提示，避免以为画面卡住了 */
+  .loading{
+    position:absolute;right:12px;top:12px;z-index:4;
+    font-size:10.5px;letter-spacing:.04em;color:#cdd9ef;
+    padding:4px 9px;border-radius:99px;
+    background:rgba(8,11,18,.66);border:1px solid rgba(255,255,255,.16);
+    opacity:0;transition:opacity .3s;
+  }
+  .loading.on{opacity:1}
+
+  /* ---------- 变阻器 ---------- */
+  .rheostat{
+    position:relative;width:100%;height:74px;margin-top:18px;
+    touch-action:none;cursor:pointer;
+  }
+  .tube{
+    position:absolute;top:14px;left:0;right:0;height:24px;
+    border-radius:99px;overflow:hidden;
+    background:
+      repeating-linear-gradient(90deg,#39414f 0 2px,#7d879b 2px 3px,#39414f 3px 7px),
+      linear-gradient(180deg,#4b556a,#252b38);
+    box-shadow:inset 0 2px 6px rgba(0,0,0,.85), inset 0 -2px 4px rgba(255,255,255,.10);
+  }
+  /* 通电高光：只用 transform，绝不改宽度（避免每帧触发布局） */
+  .fill{
+    position:absolute;inset:0;border-radius:99px;
+    background:linear-gradient(90deg,rgba(43,108,255,.18),rgba(255,202,77,.9));
+    transform:scaleX(0);transform-origin:0 50%;
+    will-change:transform;
+  }
+  /* 刻度：按档位数动态生成，位置与滑片中心严格对齐（两端各留半个旋钮宽）。
+     每一格本身就是"直接跳到该档"的按钮——44×40 的大热区，不会按到隔壁。 */
+  .stops{
+    position:absolute;left:18px;right:18px;top:34px;height:40px;
+    pointer-events:none;              /* 容器不吃点击，空白处透传给滑条 */
+  }
+  .stop{
+    position:absolute;top:0;height:40px;
+    width:44px;                       /* JS 会按档位数改成「铺满一段」，见 style.width */
+    margin:0;padding:0;border:none;background:transparent;
+    transform:translateX(-50%);cursor:pointer;
+    pointer-events:auto;              /* 只有刻度自己是热区 */
+    display:flex;flex-direction:column;align-items:center;
+    -webkit-tap-highlight-color:transparent;
+    transition:background .15s;
+  }
+  .stop .mark{
+    width:3px;height:13px;margin-top:1px;border-radius:1.5px;
+    background:rgba(206,225,255,.62);
+    transition:height .15s,background .15s,box-shadow .15s,transform .12s;
+  }
+  .stop .num{
+    margin-top:5px;font-size:9.5px;line-height:1;letter-spacing:.02em;
+    color:rgba(170,190,220,.6);font-variant-numeric:tabular-nums;
+    transition:color .15s;
+  }
+  .stop.on .mark{height:17px;background:var(--gold);box-shadow:0 0 10px rgba(255,202,77,.9)}
+  .stop.on .num{color:var(--gold);font-weight:700}
+  .stop:hover .mark{background:rgba(255,255,255,.92)}
+  .stop:active .mark{transform:scaleY(.65)}
+  .stop:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:10px}
+  /* 点击瞬间的金圈扩散：明确的"我点到了" */
+  .stop .ring{
+    position:absolute;left:50%;top:7px;width:14px;height:14px;margin:-7px 0 0 -7px;
+    border-radius:50%;border:2px solid var(--gold);opacity:0;pointer-events:none;
+  }
+  .stop.hit .ring{animation:ringOut .42s ease-out}
+  @keyframes ringOut{
+    0%{opacity:.95;transform:scale(.45)}
+    100%{opacity:0;transform:scale(3.2)}
+  }
+  .knob{
+    position:absolute;top:26px;left:0;z-index:2;
+    width:36px;height:36px;margin:-18px 0 0 0;padding:0;border:none;
+    border-radius:50%;
+    background:radial-gradient(circle at 38% 32%, #ffffff 0%, #dfe7f6 28%, #a9b6cd 55%, #6d788e 100%);
+    box-shadow:
+      0 6px 14px rgba(0,0,0,.55),
+      0 0 0 3px rgba(11,13,19,.9),
+      0 0 0 4px rgba(255,202,77,.55),
+      inset 0 -3px 6px rgba(0,0,0,.25);
+    cursor:grab;touch-action:none;
+    will-change:transform;
+  }
+  .knob:active{cursor:grabbing}
+  .knob:focus-visible{outline:2px solid var(--gold);outline-offset:4px}
+  .knob::after{
+    content:"";position:absolute;left:50%;top:50%;
+    width:2px;height:11px;margin:-11px 0 0 -1px;border-radius:2px;background:#2b3345;
+  }
+  /* 点刻度跳档时滑片追过去的过渡；一旦开始拖动这个类会被摘掉，保证 1:1 跟手 */
+  .rheostat.jumping .knob{transition:transform .26s cubic-bezier(.22,.9,.22,1)}
+
+  /* ---------- 文案 ---------- */
+  .status{
+    margin:14px 0 0;font-size:12.5px;color:#b9c6de;letter-spacing:.05em;
+    font-variant-numeric:tabular-nums;text-align:center;min-height:1.4em;
+  }
+  .status b{color:var(--gold);font-weight:800}
+  .quip{margin:7px 0 0;font-size:11.5px;color:#5f6c85;text-align:center;min-height:1.3em}
+  .foot{margin:14px 0 0;font-size:10.5px;color:#414b60;text-align:center;line-height:1.7}
+
+  /* ---------- 操作按钮 ---------- */
+  .controls{display:flex;gap:8px;justify-content:center;margin:14px 0 0;flex-wrap:wrap}
+  .btn{
+    font:inherit;font-size:12.5px;font-weight:600;color:#c9d5ec;
+    height:34px;padding:0 14px;border-radius:99px;
+    display:inline-flex;align-items:center;gap:5px;
+    background:rgba(255,255,255,.045);
+    border:1px solid rgba(160,185,235,.2);
+    cursor:pointer;user-select:none;
+    transition:background .16s,border-color .16s,color .16s,transform .12s;
+  }
+  .btn:hover{background:rgba(255,255,255,.1);color:#fff;border-color:rgba(160,185,235,.36)}
+  .btn:active{transform:scale(.97)}
+
+  /* 开关（音效 / 弹幕） */
+  .toggles{display:flex;gap:8px;justify-content:center;margin:8px 0 0}
+  .tg{
+    font:inherit;font-size:11.5px;font-weight:600;color:#7d8ba6;
+    height:28px;padding:0 12px;border-radius:99px;
+    display:inline-flex;align-items:center;gap:5px;
+    background:transparent;border:1px solid rgba(160,185,235,.16);
+    cursor:pointer;user-select:none;transition:.16s;
+  }
+  .tg.on{color:#0d1119;background:var(--gold);border-color:var(--gold);font-weight:800}
+  .tg:hover{color:#cfdcf5}
+
+  /* ---------- 分享预览弹层 ---------- */
+  .sheet{
+    position:fixed;inset:0;z-index:200;display:none;
+    background:rgba(3,5,9,.9);
+    padding:10px;overflow:auto;
+  }
+  .sheet.on{display:flex;align-items:center;justify-content:center}
+  .sheet-in{
+    width:100%;max-width:520px;
+    background:#0b0f17;border:1px solid rgba(160,185,235,.22);
+    border-radius:18px;padding:12px;
+    box-shadow:0 30px 80px rgba(0,0,0,.75);
+  }
+  .sheet-hd{
+    display:flex;align-items:center;justify-content:space-between;
+    font-size:14px;font-weight:700;color:#cfdcf5;margin:0 2px 9px;
+  }
+  .sheet-x{
+    font:inherit;font-size:17px;line-height:1;color:#7d8ba6;
+    background:transparent;border:none;cursor:pointer;
+    padding:4px 8px;border-radius:8px;transition:.15s;
+  }
+  .sheet-x:hover{color:#fff;background:rgba(255,255,255,.08)}
+  .sheet-pv{display:flex;justify-content:center}
+  .sheet-pv canvas{
+    display:block;max-width:100%;max-height:60vh;width:auto;height:auto;
+    border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.55);
+  }
+  .sheet-tip{margin:10px 2px 0;font-size:12.5px;color:#6f7f9c;text-align:center}
+  .sheet-url{display:flex;gap:8px;margin:10px 0 0}
+  .sheet-url input{
+    flex:1;min-width:0;font:inherit;font-size:13px;color:#a8b6cf;
+    background:rgba(255,255,255,.05);border:1px solid rgba(160,185,235,.2);
+    border-radius:10px;padding:0 11px;height:38px;
+  }
+  .sheet-url input:focus{outline:1px solid rgba(255,202,77,.5)}
+  .sheet-url .btn{height:38px;flex:0 0 auto;font-size:13.5px}
+  .sheet-ft{display:flex;gap:8px;margin:10px 0 0}
+  .sheet-ft .btn{flex:1;justify-content:center;height:46px;font-size:15px}
+  .sheet-ok{
+    background:var(--gold);border-color:var(--gold);
+    color:#141a24;font-weight:800;
+  }
+  .sheet-ok:hover{background:#ffd97a;border-color:#ffd97a;color:#141a24}
+
+  /* 弹幕（z-index 要比隐藏档高，否则骂声会被盖住） */
+  .danmu{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:6}
+  .danmu span{
+    position:absolute;left:100%;white-space:nowrap;
+    font-size:13px;font-weight:800;color:#dce7ff;
+    text-shadow:0 1px 2px #000,0 0 6px #000,0 0 12px rgba(0,0,0,.85);
+    animation:fly linear forwards;will-change:transform;
+  }
+  @keyframes fly{to{transform:translateX(calc(-100% - 520px))}}
+  .danmu span.hate{color:#ff8f8f}
+  .danmu span.cheer{color:#ffe08a}
+  /* 样式变体：发光 / 胶囊 / 硬描边 / 抖动 / 顶部停留 / 居中大字 */
+  .danmu span.glow{text-shadow:0 0 3px #000,0 0 9px currentColor,0 0 20px currentColor}
+  .danmu span.pill{
+    background:rgba(8,13,24,.66);border:1px solid currentColor;border-radius:99px;
+    padding:1.5px 9px;text-shadow:0 1px 2px #000;
+  }
+  .danmu span.outline{-webkit-text-stroke:.9px #05070c;text-shadow:0 2px 4px rgba(0,0,0,.92)}
+  .danmu span.shake{animation-name:flyShake}
+  @keyframes flyShake{
+    0%{transform:translateX(0) rotate(-2deg)}
+    20%{transform:translateX(calc(-20% - 104px)) rotate(2deg)}
+    40%{transform:translateX(calc(-40% - 208px)) rotate(-1.6deg)}
+    60%{transform:translateX(calc(-60% - 312px)) rotate(2deg)}
+    80%{transform:translateX(calc(-80% - 416px)) rotate(-1.2deg)}
+    100%{transform:translateX(calc(-100% - 520px)) rotate(0)}
+  }
+  .danmu span.top,.danmu span.big{
+    left:0;width:100%;text-align:center;white-space:normal;
+    animation:popFixed 3.4s ease forwards;
+  }
+  .danmu span.big{
+    font-weight:900;letter-spacing:.04em;
+    animation-name:popBig;animation-duration:2.4s;
+  }
+  @keyframes popFixed{
+    0%{opacity:0;transform:translateY(-8px) scale(.94)}
+    14%{opacity:1;transform:translateY(0) scale(1)}
+    76%{opacity:1;transform:translateY(0) scale(1)}
+    100%{opacity:0;transform:translateY(-6px) scale(1)}
+  }
+  @keyframes popBig{
+    0%{opacity:0;transform:scale(.62)}
+    18%{opacity:1;transform:scale(1.07)}
+    26%{transform:scale(1)}
+    78%{opacity:1;transform:scale(1)}
+    100%{opacity:0;transform:scale(1.04)}
+  }
+
+  /* 隐藏档：MSI 崩盘彩蛋 */
+  .secret{
+    position:absolute;inset:0;z-index:5;display:grid;place-items:center;
+    background:#05070c;opacity:0;pointer-events:none;
+    transition:opacity .45s ease;
+  }
+  .secret.on{opacity:1;pointer-events:auto}
+  .secret img{
+    position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+    filter:grayscale(.55) brightness(.55) contrast(1.05);
+  }
+  .secret::after{
+    content:"";position:absolute;inset:0;
+    background:radial-gradient(90% 70% at 50% 40%, rgba(255,40,40,.28) 0%, transparent 72%),
+               linear-gradient(180deg, rgba(120,10,20,.55), transparent 60%);
+    mix-blend-mode:screen;
+  }
+  .secret .cap{
+    position:relative;z-index:2;text-align:center;padding:0 22px;
+  }
+  .secret .cap b{
+    display:block;font-size:20px;font-weight:900;color:#ffdada;
+    letter-spacing:.04em;text-shadow:0 2px 18px rgba(255,40,40,.7);
+  }
+  .secret .cap span{display:block;margin-top:8px;font-size:12px;color:#e7b6b6;letter-spacing:.08em}
+
+  .toast{
+    position:fixed;left:50%;bottom:34px;transform:translateX(-50%) translateY(12px);
+    padding:9px 16px;border-radius:99px;font-size:12.5px;
+    background:rgba(12,16,26,.94);border:1px solid rgba(160,185,235,.3);
+    color:#eaf1ff;opacity:0;pointer-events:none;
+    transition:opacity .2s,transform .2s;z-index:99;max-width:86vw;text-align:center;
+  }
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">BIN'S FORM CALIBRATOR</p>
+  <h1>bin 氏<em>滑动变阻器</em></h1>
+  <p class="intro">拖动滑片，调节今日 bin 度</p>
+
+  <section class="stage" id="stage">
+    <div id="layers"></div>
+    <canvas id="cv"></canvas>
+    <video id="vid" muted playsinline preload="auto"></video>
+    <div class="danmu" id="danmu"></div>
+    <div class="tag"><i></i><span id="tag">稚嫩 bin 哥</span></div>
+    <div class="loading" id="loading">高清素材加载中…</div>
+    <div class="secret" id="secret">
+      <img src="assets/opt/3.jpg" alt="">
+      <div class="cap">
+        <b>那一波，硬越塔</b>
+        <span>「上头了 · 不团队 · 卖队友」</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="rheostat" id="rheostat">
+    <div class="tube"><div class="fill" id="fill"></div></div>
+    <div class="stops" id="stops"></div>
+    <button class="knob" id="knob" role="slider" tabindex="0"
+            aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"
+            aria-label="bin 度调节滑片"></button>
+  </div>
+
+  <p class="status" id="status">bin 度：<span id="pct">33%</span> · <b id="tname">稚嫩 bin 哥</b></p>
+  <p class="quip" id="quip">刚上赛场，还带着点拘谨</p>
+
+  <div class="controls">
+    <button class="btn" id="btnReset">↺ 复位</button>
+    <button class="btn" id="btnShare">📤 分享</button>
+  </div>
+  <div class="toggles">
+    <button class="tg on" id="tgSound">🔊 音效</button>
+    <button class="tg" id="tgDanmu">💬 弹幕</button>
+  </div>
+
+  <p class="foot">纯属娱乐二创 · 与选手本人及战队无关<br>← → 也能拨，Home / End 到头</p>
+</div>
+<div class="toast" id="toast"></div>
+
+<!-- 分享预览：确认后才保存 -->
+<div class="sheet" id="sheet" aria-hidden="true" role="dialog" aria-label="分享预览">
+  <div class="sheet-in">
+    <div class="sheet-hd">
+      <span>分享预览</span>
+      <button class="sheet-x" id="sheetClose" aria-label="关闭">✕</button>
+    </div>
+    <div class="sheet-pv" id="sheetPv"></div>
+    <p class="sheet-tip">长按图片也能直接存到相册</p>
+    <div class="sheet-url">
+      <input id="sheetUrl" readonly spellcheck="false" aria-label="分享链接">
+      <button class="btn" id="sheetCopy">复制</button>
+    </div>
+    <div class="sheet-ft">
+      <button class="btn" id="sheetCancel">取消</button>
+      <button class="btn sheet-ok" id="sheetSave">保存图片</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ======== 七档配置：换图只改这里 ========
+     src 首个是压缩后的小图（assets/opt），后面是原图兜底；只有 ?img=1 兜底模式会用到 src */
+  const TIERS = [
+    { name: "格温",             quip: "先变个身搞耍",               src: ["assets/skin-gwen.jpg"] },
+    { name: "bin 大小姐",       quip: "开局先搞耍一下",             src: ["assets/opt/0.jpg", "assets/bin大小姐.png"] },
+    { name: "稚嫩 bin 哥",      quip: "刚上赛场，还带着点拘谨",     src: ["assets/opt/1.jpg", "assets/稚嫩bin哥.png"] },
+    { name: "先锋赛 FMVP",      quip: "越塔跟喝水一样，冠军到手",   src: ["assets/opt/2.jpg", "assets/先锋赛冠军.png"] },
+    { name: "反思后成熟的 bin", quip: "输过、被骂过，然后站起来",   src: ["assets/opt/3.jpg", "assets/反思后成熟的bin哥 .png", "assets/反思后成熟的bin哥.png"] },
+    { name: "夺冠！意气风发！", quip: "换回队服，把奖杯举起来",     src: ["assets/opt/4.jpg", "assets/夺冠了！意气风发！.png", "assets/夺冠了!意气风发!.png"] },
+    { name: "贾科斯",           quip: "武器大师，接下来交给我",     src: ["assets/skin-jax.jpg"] }
+  ];
+
+  const N = TIERS.length;
+  const BAND = 0.32;          // 每段最后 32% 才做叠化，其余是干净的单张图
+
+  /* 帧序列模式：从视频里挑出的 11 张干净帧（已剔除眨眼、闭眼、糊像过渡帧）。
+     FRAME_TIER 是当年的 5 档映射；现在档位变成 7 档，长度不匹配时自动退回线性映射。 */
+  const FRAME_COUNT = 11;
+  const FRAME_TIER = [0, 2, 5, 7, 10];
+  const FRAME_DIR = "assets/frames/";
+  let fimgs = [];
+  let framesMode = false;
+
+  /* 视频里 7 个状态各自的时刻（秒）。按视频文件名查表：
+     evolution.mp4 = 视频5(格温→大小姐) + 视频1 + 视频2.mp4 + 视频3.mp4 + 视频4.mp4(爆衣→贾科斯)，
+     五段**直接 concat**、不加任何溶解，切口都选在两边状态一致的位置（大小姐 / 黑外套抱臂 / 举杯 / 爆衣肌肉男）。 */
+  const VIDEO_ANCHORS = {
+    /* 每个锚点 = 该档位**最标准的那一帧**（不是镜头的首尾）。
+       关键规则：档位标签是在**相邻两锚点的中点**切换的（currentTier = round(p*(N-1))），
+       所以锚点放歪 = 把上一档的长镜头整段算进下一档的标签里。
+       踩过的坑：夺冠镜头有 13 秒，早期锚点放在 15.83s 的"嘘手势"上，
+       导致拖动时**白外套捧杯被标成「反思后成熟的 bin」**（6.96→15.83 的中点是 11.4s）——
+       现在夺冠锚点压到 9.45s 的捧杯口，捧杯就永远归夺冠；片尾嘘手势/爆衣划给贾科斯（弹幕正好是「肌肉警告 / 爆衣！」）。
+       实测镜头表（evolution.mp4）：
+         0–1.3 格温 / 1.4–4.4 大小姐 / 4.5–5.4 稚嫩(队服+耳机)
+         5.5–6.4 先锋赛(粉外套+金杯) / 6.45–8.0 反思(黑外套抱臂)
+         8.1–9.2 换回队服 / 9.3–13.5 白外套捧杯 / 14–21 嘘手势渐爆衣
+         21–21.8 爆衣 / 22–24.9 贾科斯
+       改完务必用 `node tools/cdp-grid.js <端口> <地址> _probe/grid` 逐格截图复核。 */
+    "evolution.mp4": [0.10, 3.40, 5.20, 6.15, 6.85, 11.00, 24.60],
+    "evolution-motion.mp4": null
+  };
+  let TIER_TIMES = null;
+
+  const stage  = document.getElementById("stage");
+  const layers = document.getElementById("layers");
+  const track  = document.getElementById("rheostat");
+  const fill   = document.getElementById("fill");
+  const knob   = document.getElementById("knob");
+  const tagEl  = document.getElementById("tag");
+  const pctEl  = document.getElementById("pct");
+  const nameEl = document.getElementById("tname");
+  const quipEl = document.getElementById("quip");
+  const stopsEl = document.getElementById("stops");
+  const loadingEl = document.getElementById("loading");
+
+  /* ---------- 刻度：按档位数生成，位置与滑片中心对齐；每一格都能点，点了直接跳过去 ---------- */
+  const stopEls = [];
+  for (let i = 0; i < N; i++) {
+    const s = document.createElement("button");
+    s.type = "button";
+    s.className = "stop";
+    s.style.left = (i / (N - 1) * 100) + "%";
+    /* 热区铺满自己那一段：格与格之间既没有缝、也不会重叠，
+       所以不可能"按到隔壁"，整行随便点都会落到最近的那一档上 */
+    s.style.width = (100 / (N - 1)) + "%";
+    s.title = TIERS[i].name;
+    s.setAttribute("aria-label", "跳到第 " + (i + 1) + " 档：" + TIERS[i].name);
+    s.innerHTML = '<span class="mark"></span><span class="num">' + (i + 1) +
+                  '</span><span class="ring"></span>';
+    /* 别让滑条把这次按下当成一次拖拽 */
+    s.addEventListener("pointerdown", e => e.stopPropagation());
+    s.addEventListener("click", e => { e.preventDefault(); jumpToTier(i); });
+    stopsEl.appendChild(s);
+    stopEls.push(s);
+  }
+  stopEls[0].classList.add("on");
+
+  /* ---------- 建图层（预加载 + 解码） ---------- */
+  const imgs = TIERS.map((t, i) => {
+    const im = document.createElement("img");
+    im.alt = t.name;
+    im.decoding = "async";
+    im.draggable = false;
+    im.style.zIndex = String(i + 1);
+    let k = 0;
+    im.addEventListener("error", () => {
+      k++;
+      if (k < t.src.length) im.src = t.src[k];
+      else im.style.display = "none";
+    });
+    im.src = t.src[0];
+    layers.appendChild(im);
+    return im;
+  });
+
+  /* ---------- 状态 ---------- */
+  let p = 0;
+  let dragging = false;
+  let lastPct = -1, lastTier = -1;
+  let userTouched = false;   // 用户动过之后才让档位切换发声/震动，避免一进页面就响
+  let usable = 0;
+  let useVideo = false;
+
+  const clamp = (v, a, b) => v < a ? a : (v > b ? b : v);
+  const smooth = t => t * t * (3 - 2 * t);
+
+  /* ---------- 档位标签的切换点（滑块 0~1） ----------
+     默认 = 相邻两个刻度的中点（也就是"离哪个刻度近算哪个"）。
+     但有两处不能按中点切，单独指定（键 = 第几道切换线，0 起）：
+       4) 反思→夺冠：夺冠锚点在 11.00s（白外套**笑开**的那一帧），按中点切会把 8.4s 起
+          "换回队服把奖杯举起来"那一段漏回「反思后成熟」。定死在 8.35s ≈ p 0.7269。
+       5) 夺冠→贾科斯：夺冠那档素材长达 13 秒（捧杯 → 嘘手势 → 手臂暴涨/爆衣），
+          按中点切会把整段爆衣变身算成「贾科斯」（用户原话："那个肌肉你弄成变成贾科斯中间那一段"）。
+          推到最后 3%：肌肉/爆衣留在夺冠档里当过渡，真·贾科斯只在最右端（点第 7 格照样直达）。
+     注意 0.7034 是按当前锚点算出来的；**改了锚点要重算**，改完用 tools/cdp-switch.js 复核。 */
+  const SWITCH_OVERRIDE = { 4: 0.7269, 5: 0.97 };
+  const TIER_SWITCH = (() => {
+    const a = [];
+    for (let i = 0; i < N - 1; i++) {
+      a.push(Object.prototype.hasOwnProperty.call(SWITCH_OVERRIDE, i)
+        ? SWITCH_OVERRIDE[i] : (i + 0.5) / (N - 1));
+    }
+    return a;
+  })();
+
+  /* 唯一的档位判定入口：标签、弹幕、存图、海报全都走它，避免两处各算一套 */
+  function tierForP(x) {
+    x = clamp(x, 0, 1);
+    for (let i = 0; i < N - 1; i++) if (x < TIER_SWITCH[i]) return i;
+    return N - 1;
+  }
+
+  function measure() {
+    usable = Math.max(0, track.clientWidth - knob.offsetWidth);
+  }
+
+  /* ================= 视频拖动模式 =================
+     和参照项目同一套机制：视频藏在画外，滑块改 currentTime，
+     seeked 后把那一帧 drawImage 到 canvas；rAF 让"最后一次"覆盖旧的。 */
+  const cv = document.getElementById("cv");
+  const ctx = cv.getContext("2d", { alpha: false });
+  const vid = document.getElementById("vid");
+
+  let videoReady = false;
+  let seekInFlight = false;
+  let pendingT = null;
+  let seekRaf = 0;
+  let seekWatchdog = 0;
+
+  function sizeCanvas() {
+    const r = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.max(1, Math.round(stage.clientWidth * r));
+    const h = Math.max(1, Math.round(stage.clientHeight * r));
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  }
+
+  function drawVideoFrame() {
+    if (!videoReady || vid.readyState < 2) return;
+    sizeCanvas();
+    const vw = vid.videoWidth || 720;
+    const vh = vid.videoHeight || 960;
+    const cw = cv.width, ch = cv.height;
+    /* 按 cover 等比裁切，绝不拉伸人脸（视频 3:4、舞台 4:5） */
+    const s = Math.max(cw / vw, ch / vh);
+    const dw = vw * s, dh = vh * s;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(vid, (cw - dw) / 2, (ch - dh) * 0.25, dw, dh);
+    if (!useVideo) {          // 第一帧（且是对的档位）画出来之后再切到视频模式
+      useVideo = true;
+      stage.classList.add("video");
+      loadingEl.classList.remove("on");
+    }
+  }
+
+  function drawDecodedFrame() {
+    drawVideoFrame();
+    if (vid.requestVideoFrameCallback) {
+      vid.requestVideoFrameCallback(() => {
+        if (!seekInFlight && pendingT === null) drawVideoFrame();
+      });
+    }
+  }
+
+  /* 合并绘制：seek 落地的频率可能高于屏幕刷新率，
+     直接在每个 seeked 里同步 drawImage 会把主线程和 seek 管线一起堵住。
+     这里用 rAF 合并成"一帧最多画一次"，由 flushDraw 消费 drawPending。
+     ⚠️ 注意：真正的绘制必须在"发起下一次 seek 之前"完成，
+     否则 readyState 已经掉回 1，会被 drawVideoFrame 的守卫挡掉（踩过这个坑）。 */
+  let drawRaf = 0, drawPending = false;
+  function scheduleDraw() {
+    drawPending = true;
+    if (drawRaf) return;
+    drawRaf = requestAnimationFrame(() => {
+      drawRaf = 0;
+      if (drawPending) { drawPending = false; drawDecodedFrame(); }
+    });
+  }
+  function drawNow() {
+    drawPending = false;
+    drawDecodedFrame();
+  }
+
+  function commitSeek() {
+    seekRaf = 0;
+    if (seekInFlight || pendingT === null) return;
+    /* 元数据还没到时不能直接放弃，否则这一次渲染就永久丢了（画面停在空白） */
+    if (vid.readyState < 1) { seekRaf = requestAnimationFrame(commitSeek); return; }
+    if (Math.abs(vid.currentTime - pendingT) < 0.004) { pendingT = null; drawDecodedFrame(); return; }
+    seekInFlight = true;
+    vid.currentTime = pendingT;
+    /* 保险丝：万一某次 seek 的 seeked 事件没来（浏览器偶发），不能让画面永久卡死 */
+    clearTimeout(seekWatchdog);
+    seekWatchdog = setTimeout(() => {
+      seekWatchdog = 0;
+      seekInFlight = false;
+      if (!seekRaf) seekRaf = requestAnimationFrame(commitSeek);
+    }, 500);
+  }
+
+  const LAST_FRAME = 1 / 30;
+
+  /* 滑块位置 → 视频时间：按 5 个状态锚点做分段线性插值 */
+  function timeForP(v) {
+    const dur = vid.duration;
+    if (!isFinite(dur) || dur <= 0) return 0;
+    const maxT = Math.max(0, dur - LAST_FRAME);
+    if (!TIER_TIMES || TIER_TIMES.length !== N) return Math.min(v * dur, maxT);
+    const u = clamp(v, 0, 1) * (N - 1);
+    const k = Math.min(N - 2, Math.floor(u));
+    const f = u - k;
+    const t = TIER_TIMES[k] + (TIER_TIMES[k + 1] - TIER_TIMES[k]) * f;
+    return Math.min(Math.max(0, t), maxT);
+  }
+
+  function renderVideo() {
+    if (!videoReady) return;
+    const dur = vid.duration;
+    if (!isFinite(dur) || dur <= 0) return;
+    stage.dataset.anchors = TIER_TIMES ? TIER_TIMES.join(",") : "linear";
+    pendingT = timeForP(p);
+    if (!seekRaf) seekRaf = requestAnimationFrame(commitSeek);
+  }
+
+  vid.addEventListener("seeked", () => {
+    seekInFlight = false;
+    clearTimeout(seekWatchdog);
+    seekWatchdog = 0;
+    /* 关键：**每次 seek 落地都先画一帧，而且必须同步画完再排下一次 seek**。
+       以前这里要求"落点必须等于当前目标"才画，而快速拖动时目标一直在往前跑，
+       于是一帧都不画 —— 表现就是"滑快了画面冻住、松手才一下跳过去"。
+       落点就算不是最新目标，它也是刚解码好的一帧，先显示出来远好过冻住。 */
+    drawNow();
+    if (pendingT === null) return;
+    if (Math.abs(vid.currentTime - pendingT) < 0.004) { pendingT = null; return; }
+    if (!seekRaf) seekRaf = requestAnimationFrame(commitSeek);
+  });
+
+  vid.addEventListener("loadedmetadata", () => {
+    videoReady = true;
+    renderVideo();          // 触发第一次 seek，画完首帧后自动切到视频模式
+  });
+
+  /* 数据到位后只重新排队 seek，**不要立刻绘制**：
+     此时解码出来的是第 0 帧（格温），画上去就会在开局闪一下错档位的画面。
+     真正的绘制统一交给 seeked 之后的 drawDecodedFrame。 */
+  ["loadeddata", "canplay"].forEach(ev => vid.addEventListener(ev, () => {
+    if (!videoReady) return;
+    renderVideo();
+  }));
+
+  vid.addEventListener("error", () => {
+    /* 视频加载失败就先试帧序列，再退五图 */
+    useVideo = false;
+    videoReady = false;
+    stage.classList.remove("video");
+    loadingEl.classList.remove("on");
+    bootFrames();
+  });
+
+  function startVideo() {
+    const qv = new URLSearchParams(location.search).get("v");
+    const file = qv ? qv.replace(/^assets\//, "") : "evolution.mp4";
+    vid.src = "assets/" + file;
+    TIER_TIMES = Object.prototype.hasOwnProperty.call(VIDEO_ANCHORS, file)
+      ? VIDEO_ANCHORS[file] : null;
+    loadingEl.classList.add("on");     // 视频就绪前给个提示
+  }
+
+  /* 帧序列优先：有 assets/frames/frame-00.jpg 就用帧，否则退回视频，再退回五张图。
+     ?video=1 强制视频模式，?img=1 强制五图模式。 */
+  function probeFrames() {
+    return new Promise(ok => {
+      const im = new Image();
+      im.onload = () => ok(im.naturalWidth > 0);
+      im.onerror = () => ok(false);
+      im.src = FRAME_DIR + "frame-00.jpg";
+    });
+  }
+
+  function bootFrames() {
+    probeFrames().then(has => {
+      if (!has) return;                       // 连帧也没有 → 维持五图兜底模式
+      framesMode = true;
+      stage.classList.remove("video");
+      useVideo = false;
+      /* 清掉"五张图兜底模式"建的图层 */
+      [...layers.children].forEach(el => el.remove());
+      fimgs = [];
+      const loads = [];
+      for (let i = 0; i < FRAME_COUNT; i++) {
+        loads.push(new Promise(ok => {
+          const im = new Image();
+          im.onload = () => ok(im);
+          im.onerror = () => ok(null);
+          im.src = FRAME_DIR + "frame-" + String(i).padStart(2, "0") + ".jpg";
+        }));
+      }
+      Promise.all(loads).then(list => {
+        /* 转成 ImageBitmap：JPEG 只解码一次且常驻，避免拖动时"某帧首次出现"卡一下 */
+        return Promise.all(list.map(im => {
+          if (!im) return Promise.resolve(null);
+          if (typeof createImageBitmap === "function") {
+            return createImageBitmap(im).catch(() => im);
+          }
+          return (im.decode ? im.decode() : Promise.resolve()).then(() => im);
+        }));
+      }).then(list => {
+        fimgs = list;
+        stage.dataset.mode = "frames";
+        measure();
+        /* 预热：在同一个 JS 任务里把每一帧各画一遍，强制完成光栅化；
+           浏览器只合成最终状态，所以中间不会闪。 */
+        stage.classList.add("video");
+        useVideo = true;
+        loadingEl.classList.remove("on");
+        sizeCanvas();
+        for (let i = 0; i < fimgs.length; i++) {
+          if (fimgs[i]) drawCover(fimgs[i], 720, 900);
+        }
+        frameLast = { a: -1, b: -1, t: -1 };
+        render();
+      });
+    });
+  }
+
+  /* 模式优先级：默认走视频拖动（帧数最多、最连续）；
+     ?frames=1 走 11 张精选干净帧；?img=1 走最早的五张原图。 */
+  const qs = new URLSearchParams(location.search);
+  if (qs.get("img") === "1") {
+    /* 五图兜底模式，无需额外动作 */
+  } else if (qs.get("frames") === "1") {
+    bootFrames();
+  } else {
+    startVideo();
+  }
+
+  let frameLast = { a: -1, b: -1, t: -1 };
+
+  /* 按"cover"方式把 source 画满画布：等比放大后裁切，绝不会把画面压扁
+     （之前直接 drawImage(src,0,0,cw,ch) 是把图拉伸到画布尺寸，画布比例一变就会变扁） */
+  function drawCover(src, sw, sh) {
+    if (!sw || !sh) return;
+    const cw = cv.width, ch = cv.height;
+    const s = Math.max(cw / sw, ch / sh);
+    const dw = sw * s, dh = sh * s;
+    ctx.drawImage(src, (cw - dw) / 2, (ch - dh) * 0.25, dw, dh);
+  }
+
+  function renderFrames() {
+    const u = clamp(p, 0, 1) * (N - 1);
+    const k = Math.min(N - 2, Math.floor(u));
+    const f = u - k;
+    /* 档位数变了（5 档 → 7 档）而帧数没跟着补时，退回线性映射，避免算出 NaN */
+    const fi = (FRAME_TIER.length === N && FRAME_TIER[k + 1] !== undefined)
+      ? FRAME_TIER[k] + (FRAME_TIER[k + 1] - FRAME_TIER[k]) * f
+      : clamp(p, 0, 1) * (FRAME_COUNT - 1);
+    const a = Math.floor(fi);
+    const b = Math.min(FRAME_COUNT - 1, a + 1);
+    const t = Math.round((fi - a) * 24) / 24;      // 量化：同一帧反复重绘没意义
+
+    if (!useVideo) { useVideo = true; stage.classList.add("video"); }
+    const fr = Math.round(fi);
+    if (stage.dataset.frame !== String(fr)) stage.dataset.frame = String(fr);
+
+    if (a === frameLast.a && b === frameLast.b && t === frameLast.t) return;   // 画面没变就不画
+    frameLast = { a, b, t };
+
+    sizeCanvas();
+    ctx.imageSmoothingQuality = "medium";
+    ctx.globalAlpha = 1;
+    if (fimgs[a]) drawCover(fimgs[a], 720, 900);
+    if (t > 0.002 && fimgs[b]) {
+      ctx.globalAlpha = t;
+      drawCover(fimgs[b], 720, 900);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function render() {
+    const f = p * (N - 1);
+    const k = Math.min(N - 2, Math.floor(f));          // 当前段
+    const frac = f - k;
+    const t = smooth(clamp((frac - (1 - BAND)) / BAND, 0, 1));
+
+    if (framesMode) {
+      renderFrames();
+    } else if (useVideo && videoReady) {
+      renderVideo();
+    } else {
+      /* 只动两层 opacity，不切 visibility（切 visibility 会让浏览器丢弃已光栅化的纹理） */
+      for (let i = 0; i < N; i++) {
+        const im = imgs[i];
+        const op = i < k ? "0" : (i === k ? "1" : (i === k + 1 ? String(t) : "0"));
+        if (im.__op !== op) { im.style.opacity = op; im.__op = op; }
+      }
+    }
+
+    /* 位置只用 transform，不碰 layout */
+    const x = usable * p;
+    knob.style.transform = "translate3d(" + x + "px,0,0)";
+    fill.style.transform = "scaleX(" + p + ")";
+
+    /* 文案改动才写 DOM */
+    const tier = tierForP(p);
+    const pct = Math.round(p * 100);
+    if (pct !== lastPct) {
+      pctEl.textContent = pct + "%";
+      knob.setAttribute("aria-valuenow", String(pct));
+      lastPct = pct;
+    }
+    if (tier !== lastTier) {
+      nameEl.textContent = TIERS[tier].name;
+      tagEl.textContent = TIERS[tier].name;
+      quipEl.textContent = TIERS[tier].quip;
+      knob.setAttribute("aria-valuetext", pct + "% · " + TIERS[tier].name);
+      stopEls.forEach((s, i) => s.classList.toggle("on", i === tier));
+      if (userTouched) onTierChange(tier);
+      lastTier = tier;
+    }
+  }
+
+  function setP(v) { p = clamp(v, 0, 1); render(); }
+
+  function setFromClientX(cx) {
+    const r = track.getBoundingClientRect();
+    const half = knob.offsetWidth / 2;
+    if (usable <= 0) return;
+    setP((cx - r.left - half) / usable);
+  }
+
+  /* ---------- 拖拽：1:1 跟手，松手就停在原地（不做吸附） ----------
+     刻意不用 setPointerCapture：一旦捕获在旋钮上，之后的按下都会被旋钮吞掉，
+     导致"点滑条某处跳过去"失效。反正 pointermove/up 都挂在 window 上。 */
+  function dragStart(e) {
+    dragging = true;
+    userTouched = true;
+    track.classList.remove("jumping");   // 拖动必须 1:1 跟手，不要过渡
+    stage.classList.remove("anim");
+    document.body.style.cursor = "grabbing";
+    if (e.cancelable) e.preventDefault();
+  }
+
+  track.addEventListener("pointerdown", e => {
+    if (e.target === knob || knob.contains(e.target)) return;
+    dragStart(e);
+    setFromClientX(e.clientX);
+  });
+
+  knob.addEventListener("pointerdown", e => {
+    dragStart(e);
+  });
+
+  window.addEventListener("pointermove", e => {
+    if (!dragging) return;
+    setFromClientX(e.clientX);
+    if (e.cancelable) e.preventDefault();
+  }, { passive: false });
+
+  function dragEnd() {
+    if (!dragging) return;
+    dragging = false;
+    document.body.style.cursor = "";
+  }
+  window.addEventListener("pointerup", dragEnd);
+  window.addEventListener("pointercancel", dragEnd);
+
+  /* ---------- 键盘 ---------- */
+  knob.addEventListener("keydown", e => {
+    const step = 1 / (N - 1);
+    let next = null;
+    if (e.key === "ArrowRight" || e.key === "ArrowUp") next = p + step * 0.5;
+    else if (e.key === "ArrowLeft" || e.key === "ArrowDown") next = p - step * 0.5;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = 1;
+    if (next === null) return;
+    e.preventDefault();
+    userTouched = true;
+    stage.classList.add("anim");
+    setP(next);
+  });
+
+  /* ---------- 点刻度直接跳到该档：画面立刻到位，滑片用 CSS 过渡追过去 ---------- */
+  let jumpTimer = 0;
+  function jumpToTier(tier) {
+    userTouched = true;
+    const changed = currentTier() !== tier;
+
+    /* 反馈：金圈扩散 + 滑片追过去 */
+    const el = stopEls[tier];
+    if (el) { el.classList.remove("hit"); void el.offsetWidth; el.classList.add("hit"); }
+    track.classList.add("jumping");
+    clearTimeout(jumpTimer);
+    jumpTimer = setTimeout(() => track.classList.remove("jumping"), 340);
+
+    setP(tier / (N - 1));
+    /* 档位真的变了的话，render()→onTierChange 已经发过声音/震动/弹幕了，这里只补"原地点击"的情况 */
+    if (!changed) {
+      blip(tier);
+      buzz(tier === N - 1 ? 28 : 9);
+      if (pref.danmu) spawnDanmu(tier, false);
+    }
+  }
+
+  window.addEventListener("resize", () => {
+    measure();
+    /* 关键：canvas 的后备像素尺寸变了必须重画，否则 CSS 会把旧画面拉变形（看起来"越来越扁"）。
+       跳过重绘的缓存在这里要清掉。 */
+    frameLast = { a: -1, b: -1, t: -1 };
+    if (framesMode) { sizeCanvas(); }
+    render();
+  });
+
+  /* ---------- 启动 ---------- */
+  /* 默认停在「稚嫩 bin 哥」那一档；?t=序号（1 起）可直达任意档，?p=0~100 仍兼容 */
+  const START_TIER = 2;
+  const q = new URLSearchParams(location.search);
+  const qt = parseInt(q.get("t"), 10);
+  const qp = parseFloat(q.get("p"));
+  if (Number.isFinite(qt) && qt >= 1) {
+    p = clamp((qt - 1) / (N - 1), 0, 1);
+  } else if (Number.isFinite(qp)) {
+    p = clamp(qp > 1 ? qp / 100 : qp, 0, 1);
+  } else {
+    p = START_TIER / (N - 1);
+  }
+
+  measure();
+  render();                                    // 先把 UI 摆好
+
+  /* 解码完成后再画一次，拖第一下不会卡（不依赖 rAF，headless 里 rAF 可能不触发） */
+  Promise.allSettled(imgs.map(im => (im.decode ? im.decode() : Promise.resolve())))
+    .then(() => { measure(); render(); });
+
+  /* ---------- 按钮：复位 / 分享 / 海报 ---------- */
+  const toastEl = document.getElementById("toast");
+  let toastTimer = 0;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add("on");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove("on"), 2200);
+  }
+
+  document.getElementById("btnReset").addEventListener("click", () => {
+    stage.classList.add("anim");
+    setP(START_TIER / (N - 1));
+    toast("已复位到「" + TIERS[START_TIER].name + "」");
+  });
+
+  function currentTier() { return tierForP(p); }
+
+/* QR 编码器（字节模式 / EC M / 版本 1~6 / 自动掩码）：已用 jsQR 反解验证 */
+var QRLib = (function () {
+  "use strict";
+
+  /* ---- GF(256) ---- */
+  var EXP = new Array(512), LOG = new Array(256);
+  (function () {
+    var x = 1;
+    for (var i = 0; i < 255; i++) {
+      EXP[i] = x; LOG[x] = i;
+      x <<= 1;
+      if (x & 0x100) x ^= 0x11d;
+    }
+    for (var j = 255; j < 512; j++) EXP[j] = EXP[j - 255];
+  })();
+  function mul(a, b) { return (a === 0 || b === 0) ? 0 : EXP[LOG[a] + LOG[b]]; }
+
+  /* ---- 版本表：EC level M = [每块校验码字数, [[块数, 每块数据码字数], ...]] ---- */
+  var VER = {
+    1: [10, [[1, 16]]],
+    2: [16, [[1, 28]]],
+    3: [26, [[1, 44]]],
+    4: [18, [[2, 32]]],
+    5: [24, [[2, 43]]],
+    6: [16, [[4, 27]]]
+  };
+  var ALIGN = { 1: [], 2: [6, 18], 3: [6, 22], 4: [6, 26], 5: [6, 30], 6: [6, 34] };
+  var EC_M = 0;                     /* EC 指示符：L=01 M=00 Q=11 H=10 */
+
+  /* ---- Reed-Solomon ---- */
+  function genPoly(deg) {
+    var g = [1];
+    for (var i = 0; i < deg; i++) {
+      var ng = new Array(g.length + 1);
+      for (var k = 0; k < ng.length; k++) ng[k] = 0;
+      for (var j = 0; j < g.length; j++) {
+        ng[j] ^= g[j];
+        ng[j + 1] ^= mul(g[j], EXP[i]);
+      }
+      g = ng;
+    }
+    return g;
+  }
+  function ecBytes(data, ecLen) {
+    var g = genPoly(ecLen);
+    var res = new Array(ecLen);
+    for (var i = 0; i < ecLen; i++) res[i] = 0;
+    for (var d = 0; d < data.length; d++) {
+      var factor = data[d] ^ res[0];
+      res.shift(); res.push(0);
+      if (factor !== 0) for (var i2 = 0; i2 < ecLen; i2++) res[i2] ^= mul(g[i2 + 1], factor);
+    }
+    return res;
+  }
+
+  /* ---- 生成码字流 ---- */
+  function codewords(text) {
+    var bytes;
+    if (typeof TextEncoder !== "undefined") bytes = Array.from(new TextEncoder().encode(text));
+    else {
+      bytes = [];
+      for (var i = 0; i < text.length; i++) bytes.push(text.charCodeAt(i) & 0xff);
+    }
+
+    var ver = 0;
+    for (var v = 1; v <= 6; v++) {
+      var cap = 0, groups = VER[v][1];
+      for (var gi = 0; gi < groups.length; gi++) cap += groups[gi][0] * groups[gi][1];
+      if (4 + 8 + bytes.length * 8 <= cap * 8) { ver = v; break; }
+    }
+    if (!ver) throw new Error("QR: 内容太长（版本 1~6 装不下）");
+
+    /* 比特流 */
+    var bits = [];
+    function push(val, len) { for (var i = len - 1; i >= 0; i--) bits.push((val >> i) & 1); }
+    push(4, 4);                          /* 字节模式 */
+    push(bytes.length, 8);               /* 长度指示符（v1~9 是 8 位） */
+    for (var b = 0; b < bytes.length; b++) push(bytes[b], 8);
+
+    var ecLen = VER[ver][0], groups2 = VER[ver][1];
+    var dataCw = 0;
+    for (var g2 = 0; g2 < groups2.length; g2++) dataCw += groups2[g2][0] * groups2[g2][1];
+
+    /* 结束符 + 补齐到字节 */
+    var maxBits = dataCw * 8;
+    for (var t = 0; t < 4 && bits.length < maxBits; t++) bits.push(0);
+    while (bits.length % 8 !== 0) bits.push(0);
+
+    var dc = [];
+    for (var p = 0; p < bits.length; p += 8) {
+      var byteVal = 0;
+      for (var q = 0; q < 8; q++) byteVal = (byteVal << 1) | bits[p + q];
+      dc.push(byteVal);
+    }
+    /* 填充字节 */
+    var pad = [0xec, 0x11], pi = 0;
+    while (dc.length < dataCw) { dc.push(pad[pi & 1]); pi++; }
+
+    /* 分块 + 计算校验 + 交错 */
+    var blocks = [], k = 0;
+    for (var bi = 0; bi < groups2.length; bi++) {
+      for (var nb = 0; nb < groups2[bi][0]; nb++) {
+        var d = dc.slice(k, k + groups2[bi][1]); k += groups2[bi][1];
+        blocks.push({ d: d, e: ecBytes(d, ecLen) });
+      }
+    }
+    var out = [];
+    var maxD = 0;
+    for (var m1 = 0; m1 < blocks.length; m1++) maxD = Math.max(maxD, blocks[m1].d.length);
+    for (var c1 = 0; c1 < maxD; c1++) {
+      for (var b1 = 0; b1 < blocks.length; b1++) {
+        if (c1 < blocks[b1].d.length) out.push(blocks[b1].d[c1]);
+      }
+    }
+    for (var c2 = 0; c2 < ecLen; c2++) {
+      for (var b2 = 0; b2 < blocks.length; b2++) out.push(blocks[b2].e[c2]);
+    }
+    return { ver: ver, cw: out };
+  }
+
+  /* ---- 矩阵 ---- */
+  function formatBits(mask) {
+    var data = (EC_M << 3) | mask;               /* 5 位 */
+    var v = data << 10, G = 0x537;
+    for (var i = 14; i >= 10; i--) if ((v >> i) & 1) v ^= G << (i - 10);
+    return ((data << 10) | v) ^ 0x5412;
+  }
+  function maskFn(mask, r, c) {
+    switch (mask) {
+      case 0: return (r + c) % 2 === 0;
+      case 1: return r % 2 === 0;
+      case 2: return c % 3 === 0;
+      case 3: return (r + c) % 3 === 0;
+      case 4: return (Math.floor(r / 2) + Math.floor(c / 3)) % 2 === 0;
+      case 5: return (r * c) % 2 + (r * c) % 3 === 0;
+      case 6: return ((r * c) % 2 + (r * c) % 3) % 2 === 0;
+      default: return ((r + c) % 2 + (r * c) % 3) % 2 === 0;
+    }
+  }
+
+  function build(ver, cwArr, mask) {
+    var n = 17 + 4 * ver, r, c, i, j;
+    var m = [], fn = [];
+    for (r = 0; r < n; r++) {
+      m.push(new Array(n)); fn.push(new Array(n));
+      for (c = 0; c < n; c++) { m[r][c] = false; fn[r][c] = false; }
+    }
+    function set(rr, cc, v) { m[rr][cc] = v; fn[rr][cc] = true; }
+
+    /* 定位图形 + 分隔带 */
+    function finder(r0, c0) {
+      for (var dr = -1; dr <= 7; dr++) for (var dc = -1; dc <= 7; dc++) {
+        var rr = r0 + dr, cc = c0 + dc;
+        if (rr < 0 || cc < 0 || rr >= n || cc >= n) continue;
+        var dark = (dr >= 0 && dr <= 6 && (dc === 0 || dc === 6)) ||
+                   (dc >= 0 && dc <= 6 && (dr === 0 || dr === 6)) ||
+                   (dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4);
+        set(rr, cc, dark);
+      }
+    }
+    finder(0, 0); finder(0, n - 7); finder(n - 7, 0);
+
+    /* 时序图形 */
+    for (i = 8; i < n - 8; i++) { set(6, i, i % 2 === 0); set(i, 6, i % 2 === 0); }
+
+    /* 校正图形 */
+    var al = ALIGN[ver];
+    for (var ai = 0; ai < al.length; ai++) {
+      for (var aj = 0; aj < al.length; aj++) {
+        var ar = al[ai], ac = al[aj];
+        var skip = (ar === 6 && ac === 6) || (ar === 6 && ac === n - 7) || (ar === n - 7 && ac === 6);
+        if (skip) continue;
+        for (var pr = -2; pr <= 2; pr++) for (var pc = -2; pc <= 2; pc++) {
+          var mx = Math.max(Math.abs(pr), Math.abs(pc));
+          set(ar + pr, ac + pc, mx === 2 || mx === 0);
+        }
+      }
+    }
+
+    /* 格式信息（15 位，两份拷贝 + 固定黑点）
+       注意方向：第一份沿"列 8 向下 + 行 8 向左"，第二份沿"行 8 向右 + 列 8 向下"，
+       写反了（行列转置）解码器就读不出格式信息，整张图扫不出来。 */
+    var fb = formatBits(mask);
+    function bit(idx) { return ((fb >> idx) & 1) === 1; }
+    for (i = 0; i <= 5; i++) set(i, 8, bit(i));          /* col 8, rows 0..5 */
+    set(7, 8, bit(6));                                    /* col 8, row 7 */
+    set(8, 8, bit(7));                                    /* col 8, row 8 */
+    set(8, 7, bit(8));                                    /* col 7, row 8 */
+    for (i = 9; i < 15; i++) set(8, 14 - i, bit(i));      /* row 8, cols 5..0 */
+    for (i = 0; i < 8; i++) set(8, n - 1 - i, bit(i));    /* row 8, cols n-1..n-8 */
+    for (i = 8; i < 15; i++) set(n - 15 + i, 8, bit(i));  /* col 8, rows n-7..n-1 */
+    set(n - 8, 8, true);                                  /* 固定黑点 */
+
+    /* 数据比特（低位在前按字节 MSB 顺序） */
+    var bits = [];
+    for (i = 0; i < cwArr.length; i++) for (var b = 7; b >= 0; b--) bits.push((cwArr[i] >> b) & 1);
+
+    /* 之字形填装 + 掩码 */
+    var idx = 0, up = true;
+    for (var col = n - 1; col > 0; col -= 2) {
+      if (col === 6) col--;
+      for (var row = 0; row < n; row++) {
+        var rr2 = up ? (n - 1 - row) : row;
+        for (var kk = 0; kk < 2; kk++) {
+          var cc2 = col - kk;
+          if (fn[rr2][cc2]) continue;
+          var v = idx < bits.length ? bits[idx] === 1 : false;
+          idx++;
+          if (maskFn(mask, rr2, cc2)) v = !v;
+          m[rr2][cc2] = v;
+        }
+      }
+      up = !up;
+    }
+    return m;
+  }
+
+  /* ---- 掩码评分（四条 penalty 规则） ---- */
+  function penalty(m) {
+    var n = m.length, score = 0, r, c, i;
+    /* N1 同色连续 5+ */
+    for (r = 0; r < n; r++) {
+      var run = 1;
+      for (c = 1; c < n; c++) {
+        if (m[r][c] === m[r][c - 1]) run++;
+        else { if (run >= 5) score += 3 + (run - 5); run = 1; }
+      }
+      if (run >= 5) score += 3 + (run - 5);
+    }
+    for (c = 0; c < n; c++) {
+      var run2 = 1;
+      for (r = 1; r < n; r++) {
+        if (m[r][c] === m[r - 1][c]) run2++;
+        else { if (run2 >= 5) score += 3 + (run2 - 5); run2 = 1; }
+      }
+      if (run2 >= 5) score += 3 + (run2 - 5);
+    }
+    /* N2 2x2 同色块 */
+    for (r = 0; r < n - 1; r++) for (c = 0; c < n - 1; c++) {
+      var v = m[r][c];
+      if (v === m[r][c + 1] && v === m[r + 1][c] && v === m[r + 1][c + 1]) score += 3;
+    }
+    /* N3 类定位图形 */
+    var pat = [true, false, true, true, true, false, true, false, false, false, false];
+    var patR = [false, false, false, false, true, false, true, true, true, false, true];
+    function scanLine(get, len) {
+      for (var s = 0; s + 11 <= len; s++) {
+        var ok1 = true, ok2 = true;
+        for (var t = 0; t < 11; t++) {
+          var val = get(s + t);
+          if (val !== pat[t]) ok1 = false;
+          if (val !== patR[t]) ok2 = false;
+          if (!ok1 && !ok2) break;
+        }
+        if (ok1) score += 40;
+        if (ok2) score += 40;
+      }
+    }
+    for (r = 0; r < n; r++) scanLine(function (x) { return m[r][x]; }, n);
+    for (c = 0; c < n; c++) scanLine(function (x) { return m[x][c]; }, n);
+    /* N4 黑白比例 */
+    var dark = 0;
+    for (r = 0; r < n; r++) for (c = 0; c < n; c++) if (m[r][c]) dark++;
+    var pct = dark * 100 / (n * n);
+    score += Math.floor(Math.abs(pct - 50) / 5) * 10;
+    return score;
+  }
+
+  /* ---- 功能图形占位图（调试用：用来从矩阵里反读码字） ---- */
+  function fnMap(ver) {
+    var n = 17 + 4 * ver, r, c, i;
+    var fn = [];
+    for (r = 0; r < n; r++) { fn.push(new Array(n)); for (c = 0; c < n; c++) fn[r][c] = false; }
+    function mark(rr, cc) { if (rr >= 0 && cc >= 0 && rr < n && cc < n) fn[rr][cc] = true; }
+    function finderMark(r0, c0) {
+      for (var dr = -1; dr <= 7; dr++) for (var dc = -1; dc <= 7; dc++) mark(r0 + dr, c0 + dc);
+    }
+    finderMark(0, 0); finderMark(0, n - 7); finderMark(n - 7, 0);
+    for (i = 8; i < n - 8; i++) { mark(6, i); mark(i, 6); }
+    var al = ALIGN[ver];
+    for (var ai = 0; ai < al.length; ai++) for (var aj = 0; aj < al.length; aj++) {
+      var ar = al[ai], ac = al[aj];
+      if ((ar === 6 && ac === 6) || (ar === 6 && ac === n - 7) || (ar === n - 7 && ac === 6)) continue;
+      for (var pr = -2; pr <= 2; pr++) for (var pc = -2; pc <= 2; pc++) mark(ar + pr, ac + pc);
+    }
+    for (i = 0; i <= 8; i++) { mark(i, 8); mark(8, i); }
+    for (i = 0; i < 8; i++) mark(8, n - 1 - i);
+    for (i = 8; i < 15; i++) mark(n - 15 + i, 8);
+    mark(n - 8, 8);                       /* 固定黑点也算功能模块 */
+    return { n: n, fn: fn };
+  }
+
+  /* ---- 对外：文本 → 二维布尔矩阵；forceMask 仅用于对拍调试 ---- */
+  function matrix(text, forceMask) {
+    var enc = codewords(text);
+    if (typeof forceMask === "number") return build(enc.ver, enc.cw, forceMask);
+    var best = null, bestScore = Infinity;
+    for (var mask = 0; mask < 8; mask++) {
+      var mtx = build(enc.ver, enc.cw, mask);
+      var sc = penalty(mtx);
+      if (sc < bestScore) { bestScore = sc; best = mtx; }
+    }
+    return best;
+  }
+
+  return { matrix: matrix, fnMap: fnMap, codewords: codewords, maskFn: maskFn };
+})();
+
+  /* ================= 分享：先预览，确认后再保存 =================
+     点「分享」不会立刻下载，而是弹一个预览层：上面是带金框的分享图（右下角带二维码），
+     下面是可以复制的网址；用户点「保存图片」才真的落盘。
+     注意 file:// 下 canvas 会被判为"污染"（跨源），这时退回存该档静帧。 */
+  const SHARE_W = 900, SHARE_H = 1200;
+  const FONT = "'Segoe UI',system-ui,-apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
+
+  function rrect(g, x, y, w, h, r) {
+    g.beginPath();
+    if (g.roundRect) { g.roundRect(x, y, w, h, r); return; }
+    g.moveTo(x + r, y);
+    g.arcTo(x + w, y, x + w, y + h, r);
+    g.arcTo(x + w, y + h, x, y + h, r);
+    g.arcTo(x, y + h, x, y, r);
+    g.arcTo(x, y, x + w, y, r);
+    g.closePath();
+  }
+
+  /* 把当前画面按 cover 塞进 (x,y,w,h)：横向居中、纵向偏上（保住脸） */
+  function drawCurrentInto(g, x, y, w, h) {
+    const tier = currentTier();
+    let src = null, sw = 0, sh = 0;
+    if (framesMode && fimgs.length) {
+      src = fimgs[Math.round(clamp(p, 0, 1) * (FRAME_COUNT - 1))] || fimgs[0];
+      sw = src.width; sh = src.height;
+    } else if (useVideo && videoReady && vid.readyState >= 2) {
+      src = vid; sw = vid.videoWidth || 720; sh = vid.videoHeight || 960;
+    } else {
+      src = imgs[tier];
+      if (!src || !src.naturalWidth) throw new Error("no image");
+      sw = src.naturalWidth; sh = src.naturalHeight;
+    }
+    const s = Math.max(w / sw, h / sh);
+    g.drawImage(src, x + (w - sw * s) / 2, y + (h - sh * s) * 0.25, sw * s, sh * s);
+  }
+
+  /* 二维码：自带 4 模块静默区的白底黑块，直接画进 canvas（不依赖任何外部图片，也不会污染画布） */
+  function drawQR(g, text, boxX, boxY, box) {
+    const m = QRLib.matrix(text), n = m.length;
+    let scale = Math.floor(box / (n + 8));
+    if (scale < 1) scale = 1;
+    const side = n * scale, quiet = 4 * scale, total = side + quiet * 2;
+    const x0 = Math.round(boxX + (box - total) / 2), y0 = Math.round(boxY + (box - total) / 2);
+    g.fillStyle = "#ffffff";
+    rrect(g, x0, y0, total, total, 10);
+    g.fill();
+    g.fillStyle = "#05080e";
+    const ox = x0 + quiet, oy = y0 + quiet;
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        if (m[r][c]) g.fillRect(ox + c * scale, oy + r * scale, scale, scale);
+      }
+    }
+  }
+
+  function buildShareCard(url) {
+    const tier = currentTier();
+    const W = SHARE_W, H = SHARE_H;
+    const c = document.createElement("canvas");
+    c.width = W; c.height = H;
+    const g = c.getContext("2d");
+
+    /* 底 + 顶部微光 */
+    g.fillStyle = "#070a11";
+    g.fillRect(0, 0, W, H);
+    const gl = g.createRadialGradient(W / 2, -140, 40, W / 2, -140, 820);
+    gl.addColorStop(0, "rgba(255,202,77,.22)");
+    gl.addColorStop(1, "rgba(255,202,77,0)");
+    g.fillStyle = gl;
+    g.fillRect(0, 0, W, 640);
+
+    /* 双线边框 */
+    g.strokeStyle = "rgba(255,202,77,.55)"; g.lineWidth = 3;
+    rrect(g, 16, 16, W - 32, H - 32, 26); g.stroke();
+    g.strokeStyle = "rgba(160,185,235,.20)"; g.lineWidth = 1;
+    rrect(g, 27, 27, W - 54, H - 54, 18); g.stroke();
+
+    /* 四角金色角标 */
+    g.strokeStyle = "rgba(255,202,77,.9)"; g.lineWidth = 3; g.lineCap = "round";
+    const K = 30, M = 34;
+    [[M, M, 1, 1], [W - M, M, -1, 1], [M, H - M, 1, -1], [W - M, H - M, -1, -1]]
+      .forEach(function (a) {
+        g.beginPath();
+        g.moveTo(a[0] + a[2] * K, a[1]);
+        g.lineTo(a[0], a[1]);
+        g.lineTo(a[0], a[1] + a[3] * K);
+        g.stroke();
+      });
+
+    /* 顶部小标题 */
+    g.textAlign = "center";
+    g.fillStyle = "#6f7d95";
+    g.font = "600 19px " + FONT;
+    g.fillText("BIN'S FORM CALIBRATOR", W / 2, 84);
+
+    /* 画面（圆角裁切） */
+    const IX = 48, IY = 112, IW = W - 96, IH = 646;
+    g.save();
+    rrect(g, IX, IY, IW, IH, 16);
+    g.clip();
+    drawCurrentInto(g, IX, IY, IW, IH);
+    g.restore();
+    g.strokeStyle = "rgba(255,255,255,.14)"; g.lineWidth = 1.5;
+    rrect(g, IX, IY, IW, IH, 16); g.stroke();
+
+    /* 画面底部渐隐 */
+    const fade = g.createLinearGradient(0, IY + IH - 140, 0, IY + IH);
+    fade.addColorStop(0, "rgba(7,10,17,0)");
+    fade.addColorStop(1, "rgba(7,10,17,.86)");
+    g.fillStyle = fade;
+    g.fillRect(IX, IY + IH - 140, IW, 140);
+
+    /* 文字区（左对齐，右边留给二维码）—— 字要够大，缩到手机屏上才看得清 */
+    const B = IY + IH;
+    g.textAlign = "left";
+    g.fillStyle = "#8b9ab4";
+    g.font = "700 28px " + FONT;
+    g.fillText("第 " + (tier + 1) + " 档", 64, B + 56);
+
+    g.fillStyle = "#ffca4d";
+    g.font = "800 64px " + FONT;
+    g.fillText(TIERS[tier].name, 64, B + 136);
+
+    g.fillStyle = "#a7b4c9";
+    g.font = "500 30px " + FONT;
+    g.fillText("「" + TIERS[tier].quip + "」", 64, B + 196);
+
+    g.strokeStyle = "rgba(255,202,77,.3)"; g.lineWidth = 1;
+    g.beginPath();
+    g.moveTo(64, B + 232);
+    g.lineTo(150, B + 232);
+    g.stroke();
+
+    g.fillStyle = "#6d7a94";
+    g.font = "500 24px " + FONT;
+    g.fillText("拖一拖，看 bin 哥的七种形态", 64, B + 278);
+
+    const raw = url.split("?")[0];
+    if (/^https?:/.test(raw)) {
+      g.fillStyle = "#4a5568";
+      g.font = "500 20px " + FONT;
+      g.fillText(raw.replace(/^https?:\/\//, "").replace(/\/$/, ""), 64, B + 314);
+    }
+
+    /* 二维码（右下角） */
+    drawQR(g, url, 682, B + 30, 180);
+    g.textAlign = "center";
+    g.fillStyle = "#8b9ab4";
+    g.font = "700 20px " + FONT;
+    g.fillText("扫码玩", 772, B + 252);
+
+    return c;
+  }
+
+  function downloadBlob(blob, name) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2500);
+  }
+
+  /* ---------- 预览弹层 ---------- */
+  const sheet = document.getElementById("sheet");
+  const sheetPv = document.getElementById("sheetPv");
+  const sheetUrlEl = document.getElementById("sheetUrl");
+  let shareBlob = null, shareName = "";
+
+  function closeSheet() {
+    sheet.classList.remove("on");
+    sheet.setAttribute("aria-hidden", "true");
+    sheetPv.innerHTML = "";
+    shareBlob = null;
+  }
+
+  function openShare() {
+    const tier = currentTier();
+    const base = location.href.split("#")[0].split("?")[0];
+    const url = base + "?t=" + (tier + 1);
+    shareName = "bin哥-第" + (tier + 1) + "档-" +
+      TIERS[tier].name.replace(/[\\/:*?"<>|\s！!]/g, "") + ".png";
+    sheetUrlEl.value = url;
+    sheetPv.innerHTML = "";
+    shareBlob = null;
+
+    let c = null;
+    try { c = buildShareCard(url); } catch (e) { c = null; }
+    if (!c) { toast("这张取不出来，拖一下滑片再点分享"); return; }
+
+    sheetPv.appendChild(c);
+    sheet.classList.add("on");
+    sheet.setAttribute("aria-hidden", "false");
+    try { c.toBlob(b => { shareBlob = b; }, "image/png"); } catch (e) { shareBlob = null; }
+  }
+
+  function saveSheet() {
+    if (shareBlob) {
+      downloadBlob(shareBlob, shareName);
+      closeSheet();
+      toast("分享图已保存");
+      return;
+    }
+    /* file:// 打开时浏览器禁止导出画布 → 退回存该档静帧 */
+    const tier = currentTier();
+    const a = document.createElement("a");
+    a.href = TIERS[tier].src[0];
+    a.download = shareName.replace(/\.png$/, ".jpg");
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => a.remove(), 1200);
+    closeSheet();
+    toast("本地打开时画布受限，先存了该档静帧；线上版可存完整分享图");
+  }
+
+  function copySheetUrl() {
+    const v = sheetUrlEl.value;
+    function fallback() { sheetUrlEl.select(); toast("已选中，长按复制"); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(v).then(() => toast("链接已复制"), fallback);
+    } else fallback();
+  }
+
+  document.getElementById("btnShare").addEventListener("click", openShare);
+  document.getElementById("sheetSave").addEventListener("click", saveSheet);
+  document.getElementById("sheetCancel").addEventListener("click", closeSheet);
+  document.getElementById("sheetClose").addEventListener("click", closeSheet);
+  document.getElementById("sheetCopy").addEventListener("click", copySheetUrl);
+  sheet.addEventListener("click", e => { if (e.target === sheet) closeSheet(); });
+  window.addEventListener("keydown", e => {
+    if (e.key === "Escape" && sheet.classList.contains("on")) closeSheet();
+  });
+
+  /* ================= 音效 + 震动（零素材，WebAudio 合成） ================= */
+  let actx = null;
+  const pref = {
+    get sound() { return localStorage.getItem("bs.sound") !== "0"; },
+    set sound(v) { localStorage.setItem("bs.sound", v ? "1" : "0"); },
+    get danmu() { return localStorage.getItem("bs.danmu") === "1"; },
+    set danmu(v) { localStorage.setItem("bs.danmu", v ? "1" : "0"); }
+  };
+
+  function audioCtx() {
+    if (!actx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      try { actx = new AC(); } catch (e) { return null; }
+    }
+    if (actx.state === "suspended") actx.resume().catch(() => {});
+    return actx;
+  }
+
+  /* ================= 音频总线（所有声音都从这里出） =================
+     ① 总限幅 + 总音量：防止任何一路声音叠起来爆音
+     ② 圣殿混响只建一次：以前每次播放都往同一个缓存卷积节点上挂一条新的湿声通路，
+        连接会不断累加 —— 表现就是"声音越来越大"。现在改成一条常驻混响总线，
+        每次播放只是往它的输入端送信号，增益只算一次。 */
+  let bus = null;
+  function masterBus(ac) {
+    if (bus) return bus;
+    const input = ac.createGain(); input.gain.value = 1;
+    const comp = ac.createDynamicsCompressor();
+    comp.threshold.value = -6;
+    comp.knee.value = 12;
+    comp.ratio.value = 6;
+    comp.attack.value = 0.004;
+    comp.release.value = 0.25;
+    const out = ac.createGain(); out.gain.value = 1.0;      /* 总音量 */
+    input.connect(comp); comp.connect(out); out.connect(ac.destination);
+    bus = { input: input, comp: comp, out: out };
+    return bus;
+  }
+
+  let rvBus = null;
+  function reverbBus(ac) {
+    if (rvBus) return rvBus;
+    const len = Math.floor(ac.sampleRate * 2.4);
+    const ir = ac.createBuffer(2, len, ac.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = ir.getChannelData(ch);
+      for (let i = 0; i < len; i++) {
+        const t = i / len;
+        d[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 2.6);
+      }
+    }
+    const conv = ac.createConvolver();
+    conv.buffer = ir;
+    conv.normalize = true;
+    const wet = ac.createGain(); wet.gain.value = 0.4;
+    conv.connect(wet); wet.connect(masterBus(ac).input);
+    rvBus = { conv: conv, wet: wet };
+    return rvBus;
+  }
+
+  /* 最后一档（贾科斯）：**圣光「啊——」**
+     真正的"人声啊"用共振峰合成：锯齿波声带（带 5Hz 颤音）→ 三个并联带通共振峰
+     （F1 730 / F2 1090 / F3 2440，就是元音 /a/ 的频谱包络）→ 混响。 */
+  function holyHah() {
+    const ac = audioCtx();
+    if (!ac) return;
+    const B = masterBus(ac), R = reverbBus(ac);
+    const t0 = ac.currentTime;
+    const DUR = 2.2;
+
+    const out = ac.createGain(); out.gain.value = 1;
+    const dry = ac.createGain(); dry.gain.value = 0.5;
+    out.connect(dry); dry.connect(B.input);
+    out.connect(R.conv);                       /* 只送一路进常驻混响 */
+
+    /* 元音共振峰：三路并联，输出相加 */
+    const vowel = ac.createGain(); vowel.gain.value = 1;
+    [[730, 7, 5.5], [1090, 9, 2.75], [2440, 11, 1.2]].forEach(p => {
+      const bp = ac.createBiquadFilter();
+      bp.type = "bandpass"; bp.frequency.value = p[0]; bp.Q.value = p[1];
+      const g = ac.createGain(); g.gain.value = p[2];
+      vowel.connect(bp); bp.connect(g); g.connect(out);
+    });
+
+    /* 颤音：5.2Hz，±5Hz 加到每个声带的频率上，像人唱长音 */
+    const vib = ac.createOscillator();
+    vib.type = "sine"; vib.frequency.value = 5.2;
+    const vibAmt = ac.createGain(); vibAmt.gain.value = 5;
+    vib.connect(vibAmt);
+    vib.start(t0); vib.stop(t0 + DUR);
+
+    /* 声带：F3 / A3 / C4（比原来低一个八度，更像人声） */
+    [174.61, 220.0, 261.63].forEach((f, i) => {
+      const o = ac.createOscillator();
+      o.type = "sawtooth";
+      o.frequency.value = f;
+      vibAmt.connect(o.frequency);
+      const g = ac.createGain();
+      const peak = 0.18;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(peak, t0 + 0.20 + i * 0.05);
+      g.gain.setValueAtTime(peak, t0 + 0.80);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + DUR);
+      o.connect(g); g.connect(vowel);
+      o.start(t0); o.stop(t0 + DUR + 0.05);
+    });
+
+    /* 底下垫一层很轻的正弦和弦，给厚度（不进共振峰，保持干净） */
+    [349.23, 523.25].forEach(f => {
+      const o = ac.createOscillator();
+      o.type = "sine"; o.frequency.value = f;
+      const g = ac.createGain();
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.05, t0 + 0.3);
+      g.gain.setValueAtTime(0.05, t0 + 0.9);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + DUR);
+      o.connect(g); g.connect(out);
+      o.start(t0); o.stop(t0 + DUR);
+    });
+
+    /* 顶部闪光 */
+    [1568.0, 2093.0].forEach(f => {
+      const o = ac.createOscillator();
+      o.type = "sine";
+      o.frequency.setValueAtTime(f, t0 + 0.06);
+      o.frequency.linearRampToValueAtTime(f * 1.012, t0 + DUR);
+      const g = ac.createGain();
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.02, t0 + 0.3);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + DUR * 0.92);
+      o.connect(g); g.connect(out);
+      o.start(t0); o.stop(t0 + DUR);
+    });
+  }
+
+  /* 档位音阶：音高随档位递增；最后一档换圣光「啊」 */
+  function blip(tier) {
+    if (!pref.sound) return;
+    const ac = audioCtx();
+    if (!ac) return;
+    if (tier === N - 1) { holyHah(); return; }
+    const t0 = ac.currentTime;
+    const osc = ac.createOscillator();
+    const g = ac.createGain();
+    osc.type = "triangle";
+    const f0 = 174 * Math.pow(2, tier / 7);
+    osc.frequency.setValueAtTime(f0, t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.22, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.11);
+    osc.connect(g); g.connect(masterBus(ac).input);
+    osc.start(t0);
+    osc.stop(t0 + 0.14);
+  }
+
+  /* 震动不设开关：手机上一直有；桌面端没有 navigator.vibrate，自然跳过 */
+  function buzz(ms) {
+    if (navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) {} }
+  }
+
+  /* ================= 人声鼎沸（开弹幕时的人群底噪，全部现场合成） =================
+     一层噪声 → 三组带通（模拟不同音色的人声频段）→ 各自挂一个慢速 LFO 调音量，
+     叠起来就像"很多人在说话、此起彼伏"。总音量压得很低，是背景不是主角。 */
+  const CROWD_VOL = 0.22;
+  let crowdBuf = null, crowdNodes = null, crowdGain = null;
+
+  function makeCrowdBuffer(ac) {
+    const sr = ac.sampleRate, dur = 3.2, n = Math.floor(sr * dur);
+    const buf = ac.createBuffer(1, n, sr);
+    const d = buf.getChannelData(0);
+    let s = 987654321;
+    const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
+    let lp = 0;
+    for (let i = 0; i < n; i++) {
+      const w = rnd() * 2 - 1;
+      lp += (w - lp) * 0.18;                 /* 一阶低通，削掉刺耳的"沙" */
+      const t = i / sr;
+      /* 三条不同频率的慢速起伏，叠出"人潮涨落" */
+      const m =
+        0.5 +
+        0.32 * Math.sin(2 * Math.PI * 0.37 * t) +
+        0.20 * Math.sin(2 * Math.PI * 0.61 * t + 1.7) +
+        0.14 * Math.sin(2 * Math.PI * 0.93 * t + 3.1);
+      d[i] = lp * Math.max(0.08, m);
+    }
+    /* 首尾交叉淡化，循环不爆音 */
+    const fade = Math.floor(sr * 0.25);
+    for (let i = 0; i < fade; i++) {
+      const k = i / fade;
+      d[i] = d[i] * k + d[n - fade + i] * (1 - k);
+    }
+    return buf;
+  }
+
+  function startCrowd() {
+    const ac = audioCtx();
+    if (!ac || crowdNodes) return;
+    if (!crowdBuf) crowdBuf = makeCrowdBuffer(ac);
+    const now = ac.currentTime;
+    const master = ac.createGain();
+    master.gain.setValueAtTime(0.0001, now);
+    master.gain.exponentialRampToValueAtTime(CROWD_VOL, now + 1.6);   /* 慢淡入 */
+    master.connect(masterBus(ac).input);
+    crowdGain = master;
+    crowdNodes = [master];
+    [
+      { f: 430, q: 0.85, lfo: 0.31, depth: 0.5, g: 0.60 },
+      { f: 820, q: 1.05, lfo: 0.53, depth: 0.45, g: 0.50 },
+      { f: 1550, q: 1.30, lfo: 0.79, depth: 0.40, g: 0.35 }
+    ].forEach(p => {
+      const src = ac.createBufferSource();
+      src.buffer = crowdBuf;
+      src.loop = true;
+      src.playbackRate.value = 0.88 + Math.random() * 0.24;   /* 三组速率错开 */
+      const flt = ac.createBiquadFilter();
+      flt.type = "bandpass"; flt.frequency.value = p.f; flt.Q.value = p.q;
+      const g = ac.createGain(); g.gain.value = p.g;
+      const lfo = ac.createOscillator(); lfo.type = "sine"; lfo.frequency.value = p.lfo;
+      const lg = ac.createGain(); lg.gain.value = p.depth * p.g;
+      lfo.connect(lg); lg.connect(g.gain);
+      src.connect(flt); flt.connect(g); g.connect(master);
+      src.start(now + Math.random() * 0.25);
+      lfo.start();
+      crowdNodes.push(src, lfo, flt, g, lg);
+    });
+  }
+
+  function stopCrowd() {
+    if (!crowdNodes) return;
+    const nodes = crowdNodes;
+    crowdNodes = null;
+    const now = actx ? actx.currentTime : 0;
+    try {
+      if (crowdGain && actx) {
+        crowdGain.gain.cancelScheduledValues(now);
+        crowdGain.gain.setValueAtTime(Math.max(crowdGain.gain.value, 0.0002), now);
+        crowdGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);   /* 慢淡出 */
+      }
+    } catch (e) {}
+    crowdGain = null;
+    setTimeout(() => {
+      nodes.forEach(nd => {
+        try { if (nd.stop) nd.stop(); } catch (e) {}
+        try { nd.disconnect(); } catch (e) {}
+      });
+    }, 650);
+  }
+
+  /* 弹幕开 + 音效开 → 才有人声鼎沸（🔊 仍是总声音开关） */
+  function updateCrowd() {
+    if (pref.danmu && pref.sound) startCrowd();
+    else stopCrowd();
+  }
+
+  /* ================= 弹幕 ================= */
+  const danmuEl = document.getElementById("danmu");
+  const DANMU = [
+    ["格温？", "这谁啊", "变身！", "难蹦", "剪刀娘", "怎么是格温", "皮肤罢了", "先耍一会"],
+    ["大小姐驾到", "搞耍限定", "这腿", "别笑我", "娇气上单", "先臭美一下", "傲娇"],
+    ["新人有点东西", "手有点抖", "这上单哪来的", "潜力股", "青涩", "可以啊小孩", "别紧张", "有天赋"],
+    ["越塔！", "FMVP！", "bin！bin！bin！", "太猛了", "越塔跟喝水", "上单之神", "这波真猛", "稳得可怕"],
+    ["反思了", "成熟稳重", "输过才懂", "这次不浪了", "心态回来了", "沉住气", "憋着劲", "知耻后勇"],
+    ["捧杯！", "BLG！", "世界第一上单", "圆梦", "冠军！", "举起来！", "值了", "哭了"],
+    ["武器大师", "接下来交给我", "贾科斯来了", "肌肉警告", "爆衣！", "一灯照天下", "别惹他", "收割"]
+  ];
+  /* 跨档通用的路人反应，随机掺进来 */
+  const COMMON = ["666", "？？？", "哈哈哈哈哈", "前排", "泪目", "绷不住了", "笑不活了", "围观", "就差一点", "神"];
+  const HATE = ["上头了", "不团队", "卖队友", "这波送大龙", "急什么", "心态呢", "在梦游？", "退役吧", "这都能输", "醒醒"];
+  const DM_COLORS = ["#dce7ff", "#dce7ff", "#dce7ff", "#ffffff", "#9ad7ff",
+                     "#8ef0c0", "#ffd166", "#ffb3c1", "#c8b6ff", "#a8ffcf"];
+
+  /* 普通弹幕的样式权重 */
+  const DM_STYLES = [
+    { k: "",        w: 34 },   // 经典白字滚动
+    { k: "glow",    w: 14 },   // 霓虹发光
+    { k: "pill",    w: 13 },   // 胶囊标签
+    { k: "outline", w: 13 },   // 硬描边
+    { k: "shake",   w: 9 },    // 边飞边抖（惊讶/破防）
+    { k: "top",     w: 9 },    // 顶部停留
+    { k: "big",     w: 8 }     // 居中大字幕
+  ];
+  /* 骂声时段：不放 top / big，否则会盖住隐藏档的字幕 */
+  const HATE_STYLES = [
+    { k: "shake",   w: 30 },
+    { k: "pill",    w: 22 },
+    { k: "glow",    w: 20 },
+    { k: "outline", w: 18 },
+    { k: "",        w: 10 }
+  ];
+  /* 速度分层：快慢混着才像真弹幕 */
+  const SPEEDS = [{ w: 26, a: 2.5, b: 3.3 }, { w: 48, a: 3.6, b: 4.6 }, { w: 26, a: 5.0, b: 6.2 }];
+  let danmuTimer = 0;
+
+  function pickW(list) {
+    let r = Math.random() * list.reduce((a, b) => a + b.w, 0);
+    for (const it of list) if ((r -= it.w) <= 0) return it;
+    return list[list.length - 1];
+  }
+
+  function spawnDanmu(tier, hate) {
+    if (danmuEl.childElementCount > 22) return;
+    const pool = hate ? HATE : (DANMU[tier] || DANMU[0]);
+    const text = (!hate && Math.random() < 0.15)
+      ? COMMON[(Math.random() * COMMON.length) | 0]
+      : pool[(Math.random() * pool.length) | 0];
+
+    const st = pickW(hate ? HATE_STYLES : DM_STYLES);
+    const s = document.createElement("span");
+    s.textContent = text;
+    if (st.k) s.className = st.k;
+
+    /* 位置：滚动弹幕随机散布，大字幕压在下三分之一 */
+    if (st.k === "big")      s.style.top = (46 + Math.random() * 14) + "%";
+    else if (st.k === "top") s.style.top = (5 + Math.random() * 16) + "%";
+    else                     s.style.top = (5 + Math.random() * 68) + "%";
+
+    s.style.fontSize = st.k === "big"
+      ? (19 + Math.random() * 9).toFixed(1) + "px"
+      : (11 + Math.random() * 6.5).toFixed(1) + "px";
+
+    if (hate)                                    s.style.color = "#ff8f8f";
+    else if (tier === N - 1 && Math.random() < .6) s.style.color = "#ffe08a";
+    else                                         s.style.color = DM_COLORS[(Math.random() * DM_COLORS.length) | 0];
+
+    /* 停留型用 CSS 里的时长，滚动型按速度分层现取一个 */
+    if (st.k !== "top" && st.k !== "big") {
+      const sp = pickW(SPEEDS);
+      s.style.animationDuration = (sp.a + Math.random() * (sp.b - sp.a)).toFixed(2) + "s";
+    }
+    s.addEventListener("animationend", () => s.remove());
+    danmuEl.appendChild(s);
+  }
+
+  function danmuLoop() {
+    clearInterval(danmuTimer);
+    if (!pref.danmu) return;
+    danmuTimer = setInterval(() => {
+      const t = currentTier();
+      spawnDanmu(t, false);
+      /* 越往后人越挤，扎堆感更足 */
+      if (Math.random() < 0.25 + t * 0.06) setTimeout(() => spawnDanmu(t, false), 110);
+    }, 620);
+  }
+
+  /* ================= 隐藏档：MSI 崩盘彩蛋 ================= */
+  const secretEl = document.getElementById("secret");
+  let secretTimer = 0;
+  let secretHate = 0;
+
+  function showSecret() {
+    if (secretEl.classList.contains("on")) return;
+    secretEl.classList.add("on");
+    clearInterval(danmuTimer);      // 暂停正常弹幕，只留骂声
+    danmuEl.innerHTML = "";         // 清掉残留的欢快弹幕（含 top/big），免得盖住字幕
+    blipSilent();
+    buzz(40);
+    /* 骂声弹幕强制刷一阵（不管弹幕开关） */
+    let n = 0;
+    secretHate = setInterval(() => {
+      spawnDanmu(4, true);
+      if (++n > 14) clearInterval(secretHate);
+    }, 150);
+    clearTimeout(secretTimer);
+    secretTimer = setTimeout(hideSecret, 5200);
+  }
+  function hideSecret() {
+    secretEl.classList.remove("on");
+    clearInterval(secretHate);
+    clearTimeout(secretTimer);
+    danmuLoop();                    // 恢复正常弹幕
+    toast("复盘完了，继续拖吧");
+  }
+  function blipSilent() {
+    const ac = audioCtx();
+    if (!ac || !pref.sound) return;
+    const t0 = ac.currentTime;
+    const osc = ac.createOscillator();
+    const g = ac.createGain();
+    osc.type = "square";
+    osc.frequency.setValueAtTime(220, t0);
+    osc.frequency.exponentialRampToValueAtTime(60, t0 + 0.45);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.12, t0 + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.5);
+    osc.connect(g); g.connect(masterBus(ac).input);
+    osc.start(t0); osc.stop(t0 + 0.55);
+  }
+  secretEl.addEventListener("click", hideSecret);
+
+  /* 触发方式：键盘敲出 bin，或长按标题 700ms */
+  let typed = "";
+  window.addEventListener("keydown", e => {
+    if (e.key && e.key.length === 1) {
+      typed = (typed + e.key.toLowerCase()).slice(-3);
+      if (typed === "bin") { typed = ""; showSecret(); }
+    }
+  });
+  const titleEl = document.querySelector("h1");
+  let pressTimer = 0;
+  const startPress = () => { clearTimeout(pressTimer); pressTimer = setTimeout(showSecret, 700); };
+  const endPress = () => clearTimeout(pressTimer);
+  titleEl.addEventListener("pointerdown", startPress);
+  ["pointerup", "pointercancel", "pointerleave"].forEach(ev => titleEl.addEventListener(ev, endPress));
+
+
+  /* ================= 开关 ================= */
+  const tgSound = document.getElementById("tgSound");
+  const tgDanmu = document.getElementById("tgDanmu");
+  function paintToggles() {
+    tgSound.classList.toggle("on", pref.sound);
+    tgDanmu.classList.toggle("on", pref.danmu);
+  }
+  tgSound.addEventListener("click", () => {
+    pref.sound = !pref.sound;
+    paintToggles();
+    if (pref.sound) blip(currentTier());
+    updateCrowd();                    // 音效是总声音开关，关掉也把人声停掉
+  });
+  tgDanmu.addEventListener("click", () => {
+    pref.danmu = !pref.danmu;
+    paintToggles();
+    danmuLoop();
+    if (!pref.danmu) danmuEl.innerHTML = "";
+    updateCrowd();                    // 开弹幕才有人声鼎沸
+  });
+  paintToggles();
+  danmuLoop();
+  updateCrowd();
+
+  /* 浏览器要求有用户手势才能出声：第一次按下后再补一次，避免"读档时弹幕已开但没声音" */
+  window.addEventListener("pointerdown", () => { updateCrowd(); }, { once: true });
+
+  /* ================= 档位切换时的反馈：音阶 + 震动 + 一条弹幕 ================= */
+  function onTierChange(tier) {
+    blip(tier);
+    buzz(tier === N - 1 ? 28 : 9);
+    if (pref.danmu) spawnDanmu(tier, false);
+  }
+})();
+</script>
+</body>
+</html>

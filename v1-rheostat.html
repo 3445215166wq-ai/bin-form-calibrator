@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BIN 氏滑动变阻器 · BLG 夺冠特别版</title>
+<style>
+  :root{
+    --t: 0;
+    --bg1:#070b14;
+    --bg2:#0b1b33;
+    --accent:#2b6cff;
+    --gold:#ffcf4d;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,-apple-system,sans-serif;
+    color:#eaf1ff;
+    background:
+      radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--accent) calc(var(--t)*55%), transparent) 0%, transparent 60%),
+      radial-gradient(80% 60% at 50% 100%, rgba(255,207,77,calc(var(--t)*0.28)) 0%, transparent 70%),
+      linear-gradient(180deg, var(--bg1), var(--bg2));
+    min-height:100%;
+    display:flex;
+    justify-content:center;
+    padding:22px 16px 40px;
+    overflow-x:hidden;
+    transition:background .25s linear;
+  }
+  .app{width:100%;max-width:560px;display:flex;flex-direction:column;gap:14px}
+
+  /* ---------- header ---------- */
+  header{text-align:center;position:relative}
+  .badge{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:12px;letter-spacing:.14em;
+    padding:5px 12px;border-radius:999px;
+    color:#bcd4ff;background:rgba(43,108,255,.14);
+    border:1px solid rgba(43,108,255,.35);
+  }
+  .badge b{color:var(--gold)}
+  h1{
+    margin:10px 0 6px;
+    font-size:clamp(24px,7.4vw,34px);
+    letter-spacing:.02em;
+    font-weight:900;
+    background:linear-gradient(100deg,#fff 10%, #8fb6ff 45%, var(--gold) 90%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 0 calc(var(--t)*18px) rgba(255,207,77,calc(var(--t)*.55)));
+  }
+  .sub{margin:0;font-size:12.5px;color:#8ea3c6;line-height:1.6;padding:0 6px;text-wrap:balance}
+
+  /* ---------- stage ---------- */
+  .stage{
+    position:relative;
+    aspect-ratio:1/1;
+    border-radius:26px;
+    overflow:hidden;
+    background:
+      radial-gradient(60% 55% at 50% 42%, rgba(43,108,255,calc(.10 + var(--t)*.45)) 0%, transparent 72%),
+      linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.012));
+    border:1px solid rgba(140,170,255,.16);
+    box-shadow:
+      inset 0 0 90px rgba(0,0,0,.55),
+      0 24px 60px -30px rgba(0,0,0,.9),
+      0 0 calc(var(--t)*60px) rgba(255,207,77,calc(var(--t)*.35));
+    display:grid;place-items:center;
+    touch-action:pan-y;
+  }
+  .stage::after{ /* 扫描线质感 */
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(180deg,rgba(255,255,255,.045) 0 1px,transparent 1px 3px);
+    opacity:.28;
+  }
+  #binSvg,#photo{width:100%;height:100%;display:block}
+  #photo{object-fit:cover;transform-origin:50% 55%}
+  #photo[hidden]{display:none}
+
+  .danmu{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+  .danmu span{
+    position:absolute;left:100%;white-space:nowrap;
+    font-size:13px;font-weight:700;
+    color:#dbe7ff;
+    text-shadow:0 0 8px rgba(43,108,255,.9),0 1px 2px #000;
+    animation:fly linear forwards;
+    will-change:transform;
+  }
+  @keyframes fly{from{transform:translateX(0)}to{transform:translateX(calc(-100% - 620px))}}
+
+  .fx{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+  .fx i{
+    position:absolute;font-style:normal;font-size:22px;
+    animation:pop .9s ease-out forwards;
+    will-change:transform,opacity;
+  }
+  @keyframes pop{
+    0%{transform:translate(-50%,-50%) scale(.3);opacity:0}
+    25%{opacity:1}
+    100%{transform:translate(-50%,-160%) scale(1.25);opacity:0}
+  }
+
+  /* ---------- readout ---------- */
+  .readout{
+    display:flex;align-items:center;gap:12px;
+    padding:12px 16px;border-radius:18px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(140,170,255,.14);
+  }
+  .lv{
+    flex:0 0 auto;display:flex;align-items:baseline;gap:2px;
+    font-variant-numeric:tabular-nums;
+  }
+  .lv b{font-size:32px;font-weight:900;line-height:1;color:var(--gold);min-width:2.1ch;text-align:right}
+  .lv small{font-size:12px;color:#7f93b8}
+  .caption{flex:1;margin:0;font-size:14px;font-weight:700;line-height:1.45;color:#dbe7ff}
+  .buff{display:flex;gap:3px;flex:0 0 auto}
+  .buff i{font-style:normal;font-size:16px;opacity:.16;filter:grayscale(1);transition:.15s}
+  .buff i.on{opacity:1;filter:none;text-shadow:0 0 10px rgba(255,207,77,.8)}
+  .buff i.on{animation:bump .35s ease-out}
+  @keyframes bump{0%{transform:scale(1)}45%{transform:scale(1.5)}100%{transform:scale(1)}}
+
+  /* ---------- rheostat ---------- */
+  .panel{
+    padding:16px;border-radius:20px;
+    background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.02));
+    border:1px solid rgba(140,170,255,.16);
+    display:flex;flex-direction:column;gap:12px;
+  }
+  .panel-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:2px 10px;font-size:11.5px;color:#7f93b8;letter-spacing:.06em}
+  .panel-head b{color:#a9c2ee;font-weight:700}
+
+  .track{position:relative;height:46px;display:flex;align-items:center}
+  .tube{
+    position:absolute;inset:8px 0;border-radius:999px;
+    background:
+      repeating-linear-gradient(90deg,#3b4354 0 2px,#828da4 2px 3px,#3b4354 3px 7px),
+      linear-gradient(180deg,#59637a,#2a3040);
+    box-shadow:inset 0 2px 6px rgba(0,0,0,.8),inset 0 -2px 4px rgba(255,255,255,.12);
+    opacity:.85;
+  }
+  .tube::before{
+    content:"";position:absolute;inset:0;border-radius:999px;
+    background:linear-gradient(90deg,transparent,rgba(255,207,77,.85));
+    width:calc(var(--t)*100%);
+    box-shadow:0 0 14px rgba(255,207,77,.6);
+    mix-blend-mode:screen;opacity:calc(.25 + var(--t)*.75);
+  }
+  .ticks{position:absolute;inset:auto 0 -4px;height:8px;display:flex;justify-content:space-between;pointer-events:none}
+  .ticks s{width:1px;background:rgba(160,190,255,.25)}
+  .ticks s:nth-child(5n+1){height:9px;background:rgba(160,190,255,.55);margin-top:-1px}
+
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;
+    position:relative;width:100%;height:46px;background:transparent;margin:0;cursor:grab;
+  }
+  input[type=range]:active{cursor:grabbing}
+  input[type=range]::-webkit-slider-runnable-track{height:46px;background:transparent}
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:26px;height:54px;border-radius:7px;
+    margin-top:-4px;
+    background:
+      linear-gradient(180deg,#f4f7ff,#b9c6de 42%,#7f8da8 60%,#dbe4f7 100%);
+    border:1px solid #2a3244;
+    box-shadow:0 0 0 2px rgba(255,207,77,calc(.15+var(--t)*.85)),0 8px 18px -6px #000, inset 0 2px 3px #fff;
+  }
+  input[type=range]::-moz-range-track{height:46px;background:transparent}
+  input[type=range]::-moz-range-thumb{
+    width:24px;height:52px;border-radius:7px;border:1px solid #2a3244;
+    background:linear-gradient(180deg,#f4f7ff,#b9c6de 42%,#7f8da8 60%,#dbe4f7 100%);
+    box-shadow:0 0 0 2px rgba(255,207,77,.6),0 8px 18px -6px #000;
+  }
+
+  .circuit{display:flex;align-items:center;gap:10px;font-size:12px;color:#8ea3c6;font-variant-numeric:tabular-nums}
+  .circuit .chip{
+    padding:5px 10px;border-radius:9px;background:rgba(43,108,255,.12);
+    border:1px solid rgba(43,108,255,.3);color:#cfe0ff;white-space:nowrap
+  }
+  .circuit .chip b{color:#fff}
+  .circuit svg{flex:0 0 auto;width:104px;height:44px;opacity:.9}
+
+  /* ---------- controls ---------- */
+  .controls{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+  button,.btn{
+    font:inherit;font-size:13px;font-weight:800;letter-spacing:.02em;
+    padding:12px 8px;border-radius:14px;cursor:pointer;
+    color:#eaf1ff;background:rgba(255,255,255,.07);
+    border:1px solid rgba(140,170,255,.22);
+    transition:transform .12s,background .15s,border-color .15s;
+    text-align:center;user-select:none;
+    display:flex;align-items:center;justify-content:center;
+  }
+  button:hover,.btn:hover{background:rgba(255,255,255,.12)}
+  button:active,.btn:active{transform:scale(.96)}
+  #btnMax{
+    color:#1b1200;border:none;
+    background:linear-gradient(180deg,#ffe287,#ffb52e);
+    box-shadow:0 10px 24px -12px #ffb52e;
+  }
+  #btnMax:hover{background:linear-gradient(180deg,#fff0b8,#ffc352)}
+  .btn.ghost{background:rgba(43,108,255,.14);border-color:rgba(43,108,255,.36)}
+  footer{text-align:center;font-size:11px;color:#5d6d89;line-height:1.7}
+  footer b{color:#8497b8}
+  .hidden{display:none !important}
+
+  @media (max-width:420px){
+    .controls{grid-template-columns:repeat(2,1fr)}
+    .circuit{flex-wrap:wrap}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="badge">🏆 <b>BLG 夺冠</b> 特别版 · 蹭热度许可证已下发</div>
+    <h1>BIN 氏滑动变阻器</h1>
+    <p class="sub">31 级 bin 哥强度校准器 —— 滑片往右推，电阻变小，电流变大，人格开始变强</p>
+  </header>
+
+  <div class="stage" id="stage">
+    <!-- ======== bin 哥本体（纯 SVG，无素材） ======== -->
+    <svg id="binSvg" viewBox="0 0 400 400" aria-label="bin 哥强度示意图">
+      <defs>
+        <radialGradient id="skin" cx="42%" cy="34%" r="72%">
+          <stop offset="0%" stop-color="#ffe3cc"/>
+          <stop offset="58%" stop-color="#f8cfae"/>
+          <stop offset="100%" stop-color="#e6b088"/>
+        </radialGradient>
+        <linearGradient id="jersey" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#1d2a44"/>
+          <stop offset="100%" stop-color="#0c1322"/>
+        </linearGradient>
+        <linearGradient id="hairG" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#2b303c"/>
+          <stop offset="100%" stop-color="#12151c"/>
+        </linearGradient>
+        <radialGradient id="auraG">
+          <stop offset="60%" stop-color="rgba(255,207,77,0)"/>
+          <stop offset="100%" stop-color="rgba(255,207,77,.55)"/>
+        </radialGradient>
+        <filter id="soft"><feGaussianBlur stdDeviation="7"/></filter>
+      </defs>
+
+      <!-- 光环 -->
+      <g id="aura" opacity="0">
+        <circle cx="200" cy="210" r="150" fill="url(#auraG)" filter="url(#soft)"/>
+        <circle cx="200" cy="210" r="132" fill="none" stroke="#ffcf4d" stroke-width="2" stroke-dasharray="10 14" opacity=".9"/>
+        <circle cx="200" cy="210" r="156" fill="none" stroke="#7fb0ff" stroke-width="1.5" stroke-dasharray="4 10" opacity=".7"/>
+      </g>
+
+      <!-- 肩膀 / 队服 -->
+      <g id="body">
+        <path d="M46 400 C56 328 118 296 200 296 C282 296 344 328 354 400 Z" fill="url(#jersey)"/>
+        <path d="M46 400 C56 328 118 296 200 296 C282 296 344 328 354 400" fill="none" stroke="#2b6cff" stroke-width="2.5" opacity=".8"/>
+        <path d="M148 302 L200 356 L252 302" fill="none" stroke="#2b6cff" stroke-width="3" opacity=".55"/>
+        <text x="200" y="384" text-anchor="middle" font-size="30" font-weight="900"
+              fill="#eef4ff" letter-spacing="6" font-family="system-ui,sans-serif" opacity=".92">BIN</text>
+      </g>
+
+      <!-- 头（整体抖动 + 缩放） -->
+      <g id="head">
+        <rect x="176" y="276" width="48" height="34" rx="14" fill="#e2b492"/>
+        <!-- 耳 -->
+        <ellipse cx="107" cy="212" rx="15" ry="21" fill="#eec19e"/>
+        <ellipse cx="293" cy="212" rx="15" ry="21" fill="#eec19e"/>
+        <!-- 后发 -->
+        <ellipse cx="200" cy="188" rx="104" ry="100" fill="url(#hairG)"/>
+        <!-- 脸 -->
+        <ellipse cx="200" cy="216" rx="87" ry="95" fill="url(#skin)"/>
+        <!-- 腮红 -->
+        <g id="blush" opacity="0">
+          <ellipse cx="148" cy="246" rx="18" ry="10" fill="#ff6b6b" opacity=".38"/>
+          <ellipse cx="252" cy="246" rx="18" ry="10" fill="#ff6b6b" opacity=".38"/>
+        </g>
+        <!-- 眉眼 -->
+        <g id="brows">
+          <rect id="browL" x="133" y="186" width="50" height="11" rx="5.5" fill="#1a1d24"/>
+          <rect id="browR" x="217" y="186" width="50" height="11" rx="5.5" fill="#1a1d24"/>
+        </g>
+        <g id="eyes">
+          <ellipse id="eyeWL" cx="160" cy="211" rx="22" ry="12" fill="#ffffff"/>
+          <ellipse id="eyeWR" cx="240" cy="211" rx="22" ry="12" fill="#ffffff"/>
+          <circle id="pupilL" cx="160" cy="211" r="9" fill="#161a22"/>
+          <circle id="pupilR" cx="240" cy="211" r="9" fill="#161a22"/>
+          <circle id="glintL" cx="156" cy="206" r="3.2" fill="#fff" opacity=".95"/>
+          <circle id="glintR" cx="236" cy="206" r="3.2" fill="#fff" opacity=".95"/>
+        </g>
+        <!-- 鼻 -->
+        <path d="M204 224 q-9 15 0 18" fill="none" stroke="#d09a76" stroke-width="4" stroke-linecap="round" opacity=".85"/>
+        <!-- 嘴（高度随强度） -->
+        <path id="mouth" d="M171 270 Q200 270 229 270 Q200 272 171 270 Z" fill="#7d2b34"/>
+        <!-- 耳机 -->
+        <g id="phones">
+          <path d="M96 200 C96 96 304 96 304 200" fill="none" stroke="#1a2131" stroke-width="15" stroke-linecap="round"/>
+          <path d="M96 200 C96 96 304 96 304 200" fill="none" stroke="#2b6cff" stroke-width="4" stroke-linecap="round" opacity=".8"/>
+          <rect x="72" y="182" width="34" height="58" rx="15" fill="#1a2131" stroke="#2b6cff" stroke-width="2" opacity=".95"/>
+          <rect x="294" y="182" width="34" height="58" rx="15" fill="#1a2131" stroke="#2b6cff" stroke-width="2" opacity=".95"/>
+        </g>
+        <!-- 前发（刘海） -->
+        <path d="M112 200 C110 106 290 106 288 200
+                 C282 176 273 158 259 164
+                 C247 170 239 146 225 155
+                 C211 164 199 143 183 152
+                 C169 160 153 144 145 161
+                 C137 178 123 188 112 200 Z" fill="url(#hairG)"/>
+        <path d="M145 161 C132 150 118 158 116 176 C126 164 136 160 145 161 Z" fill="#0e1117" opacity=".9"/>
+        <path d="M259 164 C272 152 284 162 286 180 C276 166 267 162 259 164 Z" fill="#0e1117" opacity=".9"/>
+      </g>
+    </svg>
+
+    <img id="photo" hidden alt="自定义图片">
+    <div class="fx" id="fx"></div>
+    <div class="danmu" id="danmu"></div>
+  </div>
+
+  <div class="readout">
+    <div class="lv"><b id="lvNum">0</b><small>/30</small></div>
+    <p class="caption" id="caption">休赛期 · 关机中，勿扰</p>
+    <div class="buff" id="buff">
+      <i data-at="10">⚡</i><i data-at="18">🔥</i><i data-at="24">👑</i><i data-at="28">🏆</i>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <span>滑动变阻器 · 滑片 R<sub>p</sub></span>
+      <span><b id="hint">滑片右移 → 接入电阻↓ → 电流↑ → bin 哥↑</b></span>
+    </div>
+    <div class="track">
+      <div class="tube"></div>
+      <input id="slider" type="range" min="0" max="30" step="1" value="0" aria-label="bin 哥强度">
+      <div class="ticks" id="ticks"></div>
+    </div>
+    <div class="circuit">
+      <svg viewBox="0 0 104 44" aria-hidden="true">
+        <path d="M4 22 H26" stroke="#5f7196" stroke-width="2"/>
+        <rect x="26" y="13" width="34" height="18" rx="3" fill="#20293c" stroke="#7fb0ff" stroke-width="2"/>
+        <path d="M43 13 V4 H74" stroke="#ffcf4d" stroke-width="2" fill="none"/>
+        <path d="M74 4 l-6 -4 v8 z" fill="#ffcf4d" transform="rotate(90 74 4)"/>
+        <path d="M60 13 V22" stroke="#5f7196" stroke-width="2"/>
+        <path d="M60 22 H100 M4 22 V34 H100 V22" stroke="#5f7196" stroke-width="2" fill="none"/>
+        <path d="M96 30 h8 M96 38 h8" stroke="#5f7196" stroke-width="2"/>
+      </svg>
+      <span class="chip">R = <b id="valR">320</b> Ω</span>
+      <span class="chip">I = <b id="valI">18.8</b> mA</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="btnMax">🔥 一键拉满</button>
+    <button id="btnAuto">▶ 自动巡演</button>
+    <button id="btnShare">📋 复制文案</button>
+    <label class="btn ghost" for="file">🖼 换成我的图</label>
+    <input id="file" type="file" accept="image/*" hidden>
+    <button id="btnReset">↺ 复位</button>
+  </div>
+
+  <footer>
+    <b>bin 哥滑动变阻器 v1.0</b> · 单文件零依赖，双击即用<br>
+    灵感来自「梁氏滑动变阻器」，本器纯属娱乐，与选手本人无关 🙏
+  </footer>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ---------------- 31 级文案 ---------------- */
+  const CAPTIONS = [
+    "休赛期 · 关机中，勿扰",
+    "刚开机，手还是凉的",
+    "进训练室，先刷两眼手机",
+    "BP 阶段：随便，我不挑",
+    "第一波兵，稳稳的",
+    "对线开始，手速上线",
+    "他动了，他也动了",
+    "刀刀都到肉",
+    "压刀 20，嘴开始硬",
+    "塔皮先吃一口",
+    "越塔？我 bin 哥说了算",
+    "一血，先手是他的",
+    "打野来也没用",
+    "双杀，笑一下",
+    "三杀，人已经站起来了",
+    "四杀！外套都脱了",
+    "五杀！！！！",
+    "公屏：还有谁",
+    "全场最高经济，断层领先",
+    "眼神一收，切决赛模式",
+    "决胜局，耳机戴紧",
+    "开团指令：我数三下",
+    "闪现进场，镜头跟上",
+    "这波团，我开的",
+    "对面双 C 直接蒸发",
+    "一塔，推",
+    "二塔，继续推",
+    "水晶在掉血",
+    "终局一击，屏幕黑了",
+    "夺冠！奖杯到手",
+    "BIN 哥！世界第一上单！"
+  ];
+
+  const DANMU = [
+    "bin哥牛逼","世界第一上单","BIN！","这波开了","夺冠了！","家人们谁懂啊",
+    "拉满了拉满了","这波节奏起飞","上单之神","BLG 冲！","我的 bin","刀刀暴击",
+    "稳如老狗","这含金量","啊啊啊啊","我 bin 哥说了算","导播给个特写","这波不亏"
+  ];
+
+  const U = 6;              // 电源电压 6V
+  const R_MIN = 20, R_MAX = 320;
+
+  const root = document.documentElement;
+  const $ = id => document.getElementById(id);
+
+  const el = {
+    svg: $("binSvg"), photo: $("photo"), stage: $("stage"),
+    aura: $("aura"), head: $("head"), blush: $("blush"),
+    browL: $("browL"), browR: $("browR"),
+    eyeWL: $("eyeWL"), eyeWR: $("eyeWR"),
+    pupilL: $("pupilL"), pupilR: $("pupilR"),
+    glintL: $("glintL"), glintR: $("glintR"),
+    mouth: $("mouth"),
+    slider: $("slider"), lvNum: $("lvNum"), caption: $("caption"),
+    buff: $("buff"), ticks: $("ticks"), fx: $("fx"), danmu: $("danmu"),
+    valR: $("valR"), valI: $("valI")
+  };
+
+  let level = 0;
+  let autoTimer = null;
+  let danmuAcc = 0;
+  let px = 0, py = 0;          // 鼠标/触摸位置（用于轻微视差）
+
+  /* ---------------- 刻度 ---------------- */
+  for (let i = 0; i <= 30; i++) el.ticks.appendChild(document.createElement("s"));
+
+  /* ---------------- 核心渲染 ---------------- */
+  function render(n, opts = {}) {
+    level = Math.max(0, Math.min(30, n | 0));
+    const t = level / 30;
+
+    root.style.setProperty("--t", t.toFixed(4));
+    root.style.setProperty("--accent", t > 0.82 ? "#ffcf4d" : "#2b6cff");
+
+    el.slider.value = level;
+    el.lvNum.textContent = level;
+    el.caption.textContent = CAPTIONS[level];
+
+    /* 物理读数：滑片右移 → 接入电阻变小 */
+    const R = Math.round(R_MAX - (R_MAX - R_MIN) * t);
+    const I = (U / R) * 1000;
+    el.valR.textContent = R;
+    el.valI.textContent = I.toFixed(1);
+
+    /* --- 眼睛 --- */
+    const eyeRy = 3.5 + 14.5 * t;
+    el.eyeWL.setAttribute("ry", eyeRy.toFixed(2));
+    el.eyeWR.setAttribute("ry", eyeRy.toFixed(2));
+    const pr = 6.5 + 5.5 * t;
+    [el.pupilL, el.pupilR].forEach(p => p.setAttribute("r", pr.toFixed(2)));
+    [el.glintL, el.glintR].forEach((g, i) => {
+      const s = 0.7 + 0.6 * t;
+      g.setAttribute("r", (3.2 * s).toFixed(2));
+      g.setAttribute("opacity", (0.35 + 0.65 * t).toFixed(2));
+    });
+
+    /* --- 眉毛：越拉越凶 --- */
+    const browRot = -6 + 17 * t;
+    el.browL.setAttribute("transform", `rotate(${browRot.toFixed(2)} 158 191)`);
+    el.browR.setAttribute("transform", `rotate(${(-browRot).toFixed(2)} 242 191)`);
+    el.browL.setAttribute("y", (186 - 3 * t).toFixed(2));
+    el.browR.setAttribute("y", (186 - 3 * t).toFixed(2));
+
+    /* --- 嘴：从抿着到张大 --- */
+    const open = 1 + 30 * t;
+    el.mouth.setAttribute(
+      "d",
+      `M171 270 Q200 ${(270 + open).toFixed(1)} 229 270 Q200 ${(270 - open * 0.75).toFixed(1)} 171 270 Z`
+    );
+    el.mouth.setAttribute("fill", t > 0.55 ? "#5d1b24" : "#7d2b34");
+
+    /* --- 腮红 / 光环 --- */
+    el.blush.setAttribute("opacity", (t * 0.9).toFixed(2));
+    el.aura.setAttribute("opacity", Math.pow(t, 1.25).toFixed(3));
+
+    /* --- Buff 栏 --- */
+    [...el.buff.children].forEach(i => {
+      const at = +i.dataset.at;
+      const on = level >= at;
+      if (on && !i.classList.contains("on")) i.classList.add("on");
+      if (!on) i.classList.remove("on");
+    });
+    el.buff.lastElementChild.classList.toggle("on", level >= 30);
+
+    /* --- 换图模式 --- */
+    if (!el.photo.hidden) {
+      el.photo.style.filter =
+        `saturate(${1 + 0.9 * t}) contrast(${1 + 0.45 * t}) brightness(${0.86 + 0.3 * t})`;
+    }
+
+    if (!opts.silent) burst(t);
+  }
+
+  /* ---------------- 动效循环 ---------------- */
+  let lastT = performance.now();
+  function loop(now) {
+    const dt = Math.min(80, now - lastT);
+    lastT = now;
+    const t = level / 30;
+    const time = now / 1000;
+
+    /* 头部抖动 + 缩放 + 呼吸 */
+    const amp = 0.6 + 4.2 * t * t;
+    const dx = Math.sin(time * 17) * amp + px * 6 * t;
+    const dy = Math.cos(time * 21) * amp * 0.55 + py * 5 * t;
+    const rot = Math.sin(time * 5.5) * 1.6 * t;
+    const sc = 1 + 0.055 * t + Math.sin(time * 3) * 0.006 * t;
+    el.head.setAttribute(
+      "transform",
+      `translate(${dx.toFixed(2)} ${dy.toFixed(2)}) translate(200 224) rotate(${rot.toFixed(2)}) scale(${sc.toFixed(4)}) translate(-200 -224)`
+    );
+
+    /* 光环旋转 */
+    if (t > 0.02) {
+      el.aura.setAttribute(
+        "transform",
+        `rotate(${(time * (12 + 90 * t)).toFixed(1)} 200 210) scale(${(1 + 0.04 * Math.sin(time * 2.4)).toFixed(3)})`
+      );
+      el.aura.style.transformOrigin = "200px 210px";
+    }
+
+    /* 弹幕 */
+    if (t > 0.10) {
+      danmuAcc += dt;
+      const interval = 1000 - 780 * t;
+      if (danmuAcc > interval) {
+        danmuAcc = 0;
+        spawnDanmu(t);
+      }
+    }
+
+    /* 换图模式下也抖动 */
+    if (!el.photo.hidden) {
+      const amp2 = 0.5 + 3 * t * t;
+      el.photo.style.transform =
+        `scale(${(1 + 0.09 * t).toFixed(3)}) ` +
+        `translate(${(Math.sin(time * 17) * amp2 * 0.5).toFixed(2)}%, ${(Math.cos(time * 21) * amp2 * 0.4).toFixed(2)}%) ` +
+        `rotate(${(Math.sin(time * 5.5) * 1.2 * t).toFixed(2)}deg)`;
+    }
+
+    requestAnimationFrame(loop);
+  }
+
+  /* ---------------- 弹幕 / 粒子 ---------------- */
+  function spawnDanmu(t) {
+    if (el.danmu.childElementCount > 26) return;
+    const s = document.createElement("span");
+    s.textContent = DANMU[(Math.random() * DANMU.length) | 0];
+    s.style.top = (4 + Math.random() * 88) + "%";
+    s.style.fontSize = (11 + Math.random() * 7).toFixed(1) + "px";
+    s.style.opacity = (0.55 + 0.45 * Math.random()).toFixed(2);
+    if (t > 0.8) s.style.color = "#ffe08a";
+    const dur = (4.2 - 3.1 * t + Math.random()).toFixed(2);
+    s.style.animation = `fly ${dur}s linear forwards`;
+    s.addEventListener("animationend", () => s.remove());
+    el.danmu.appendChild(s);
+  }
+
+  function burst(t) {
+    const emojis = t > 0.85 ? ["🏆","👑","🔥","⚡","💥","✨"]
+                 : t > 0.5  ? ["🔥","⚡","💥","✨"]
+                 : t > 0.18 ? ["⚡","✨","💢"]
+                 : ["✨"];
+    const n = t > 0.85 ? 5 : t > 0.5 ? 3 : 1;
+    for (let k = 0; k < n; k++) {
+      const i = document.createElement("i");
+      i.textContent = emojis[(Math.random() * emojis.length) | 0];
+      i.style.left = (24 + Math.random() * 52) + "%";
+      i.style.top  = (26 + Math.random() * 46) + "%";
+      i.style.fontSize = (16 + Math.random() * 18).toFixed(0) + "px";
+      i.addEventListener("animationend", () => i.remove());
+      el.fx.appendChild(i);
+      if (el.fx.childElementCount > 40) el.fx.firstElementChild?.remove();
+    }
+  }
+
+  /* ---------------- 交互 ---------------- */
+  el.slider.addEventListener("input", e => render(+e.target.value));
+
+  $("btnMax").addEventListener("click", () => {
+    stopAuto();
+    const from = level;
+    const t0 = performance.now();
+    (function step(now) {                     // 120ms 内冲到 30
+      const p = Math.min(1, (now - t0) / 420);
+      const eased = 1 - Math.pow(1 - p, 3);
+      render(Math.round(from + (30 - from) * eased));
+      if (p < 1) requestAnimationFrame(step);
+      else render(30);
+    })(t0);
+  });
+
+  $("btnReset").addEventListener("click", () => { stopAuto(); render(0); });
+
+  $("btnAuto").addEventListener("click", () => {
+    if (autoTimer) { stopAuto(); return; }
+    $("btnAuto").textContent = "⏸ 停止巡演";
+    let dir = 1;
+    autoTimer = setInterval(() => {
+      let next = level + dir;
+      if (next >= 30) { next = 30; dir = -1; }
+      if (next <= 0)  { next = 0;  dir = 1; }
+      render(next);
+    }, 130);
+  });
+
+  function stopAuto() {
+    if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+    $("btnAuto").textContent = "▶ 自动巡演";
+  }
+
+  $("btnShare").addEventListener("click", async () => {
+    const text =
+      `我把 bin 哥的强度拉到了 ${level}/30 级 —— 「${CAPTIONS[level]}」\n` +
+      `（接入电阻 ${el.valR.textContent}Ω，电流 ${el.valI.textContent}mA）\n` +
+      `#BLG夺冠 #bin哥滑动变阻器 #世界第一上单`;
+    const btn = $("btnShare");
+    try {
+      await navigator.clipboard.writeText(text);
+      btn.textContent = "✅ 已复制";
+    } catch {
+      btn.textContent = "⚠ 请手动长按复制";
+      prompt("复制下面的文案：", text);
+    }
+    setTimeout(() => (btn.textContent = "📋 复制文案"), 1600);
+  });
+
+  /* 换图模式 */
+  $("file").addEventListener("change", e => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const url = URL.createObjectURL(f);
+    el.photo.src = url;
+    el.photo.hidden = false;
+    el.svg.classList.add("hidden");
+    render(level, { silent: true });
+    $("btnReset").textContent = "↺ 复位";
+  });
+
+  /* 键盘 */
+  window.addEventListener("keydown", e => {
+    if (e.key === "ArrowRight" || e.key === "ArrowUp") { stopAuto(); render(level + 1); e.preventDefault(); }
+    if (e.key === "ArrowLeft"  || e.key === "ArrowDown") { stopAuto(); render(level - 1); e.preventDefault(); }
+    if (e.key === "Home") { stopAuto(); render(0); }
+    if (e.key === "End")  { stopAuto(); render(30); }
+  });
+
+  /* 指针视差 */
+  el.stage.addEventListener("pointermove", e => {
+    const r = el.stage.getBoundingClientRect();
+    px = (e.clientX - r.left) / r.width - 0.5;
+    py = (e.clientY - r.top) / r.height - 0.5;
+  });
+  el.stage.addEventListener("pointerleave", () => { px = 0; py = 0; });
+
+  /* ---------------- 启动 ---------------- */
+  const urlLv = parseInt(new URLSearchParams(location.search).get("lv"), 10);
+  const hasUrlLv = Number.isFinite(urlLv);
+  render(hasUrlLv ? urlLv : 0, { silent: true });
+  requestAnimationFrame(loop);
+
+  /* 首次打开自动演示一下，提示这是可拖的 */
+  if (!hasUrlLv) {
+    setTimeout(() => {
+      if (level !== 0) return;
+      $("btnAuto").click();
+      setTimeout(() => { if (autoTimer) { stopAuto(); render(0); } }, 2400);
+    }, 900);
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "width": 1200,
+  "height": 630,
+  "bg": "#0b0d13",
+  "portrait": "assets/skin-jax.jpg",
+  "portraitRightPad": 40,
+  "kicker": "BIN'S FORM CALIBRATOR",
+  "title": "bin 氏滑动变阻器",
+  "subtitle": "拖动滑片，把 bin 哥从格温拖到贾科斯",
+  "chain": "格温 → 大小姐 → 稚嫩 → FMVP → 成熟 → 举杯 → 贾科斯",
+  "footer": "← → 也能拨 · 纯属娱乐二创",
+  "out": "assets/share.png"
+}

@@ -1,0 +1,54 @@
+# ---- 运行时必需：进仓库 ----
+#   index.html
+#   assets/evolution.mp4          （拼好的成片，4.81MB）
+#   assets/share.png              （OG 封面）
+#   assets/skin-gwen.jpg / skin-jax.jpg
+#   assets/opt/*.jpg              （5 张压缩档位图，跑 ?img=1 用）
+#   assets/frames/*.jpg           （11 张帧序列，跑 ?frames=1 用）
+#   tools/                        （打包与验证脚本）
+
+# ---- 源素材：本地留着，不进仓库 ----
+# 原始大 PNG（11MB+，只作兜底，运行时走 assets/opt）
+assets/bin大小姐.png
+assets/稚嫩bin哥.png
+assets/先锋赛冠军.png
+assets/反思后成熟的bin哥 .png
+assets/夺冠了！意气风发！.png
+
+# 五个源视频（拼成 evolution.mp4 的原料）
+assets/视频 (1).mp4
+assets/视频2.mp4
+assets/视频3.mp4
+assets/视频4.mp4
+assets/视频5.mp4
+
+# A/B 对比用的备选成片
+assets/evolution-motion.mp4
+
+# ---- 构建产物 ----
+dist/
+dist.zip
+dist-fixed.zip
+
+# ---- 测试 / 调试产物 ----
+_v/
+_sc/
+_sh/
+_sh2/
+_sh3/
+_sh4/
+_dm/
+_probe/
+_smile/
+*.bak
+
+# ---- 系统与依赖 ----
+node_modules/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- 本地 AI 工具的私有数据（绝对不要进公开仓库）----
+.dsh-meow/
+.dsh/
+*.log
