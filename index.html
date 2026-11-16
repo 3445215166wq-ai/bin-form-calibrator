@@ -1685,6 +1685,70 @@ var QRLib = (function () {
     if (navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) {} }
   }
 
+  /* ================= 夺冠现场的人声 =================
+     用的是**真素材**：Wikimedia Commons 的 CC0 录音
+     "large crowd medium distance"（作者 eguobyte，公有领域 CC0），
+     截取最热闹的 6 秒、单声道 44.1k、mp3 64k（约 48KB），首尾做淡变以便无缝循环。
+     ⚠️ 只在「夺冠！意气风发！」(5) 和「贾科斯」(6) 两档响，离开档位立刻淡出。
+     之前那版是"噪声带通"合成的假人群，听感是海浪，且全程循环 —— 用户点名太吵，已废弃。 */
+  const CROWD_SRC = "assets/crowd.mp3";
+  const CROWD_FROM = 5;              /* 0 起：5 = 夺冠，6 = 贾科斯 */
+  const CROWD_VOL = 0.22;
+  let crowdBuf = null, crowdLoading = false, crowdSrc = null, crowdGain = null, wantCrowd = false;
+
+  function loadCrowd() {
+    if (crowdBuf || crowdLoading) return Promise.resolve(crowdBuf);
+    const ac = audioCtx();
+    if (!ac) return Promise.resolve(null);
+    crowdLoading = true;
+    return fetch(CROWD_SRC)
+      .then(r => { if (!r.ok) throw new Error("http " + r.status); return r.arrayBuffer(); })
+      .then(ab => ac.decodeAudioData(ab))
+      .then(buf => { crowdBuf = buf; crowdLoading = false; return buf; })
+      .catch(() => { crowdLoading = false; return null; });   /* 拿不到就静默降级，不影响其它功能 */
+  }
+
+  function crowdOn() {
+    if (!pref.sound || crowdSrc) return;
+    const ac = audioCtx();
+    if (!ac) return;
+    loadCrowd().then(buf => {
+      if (!buf || !wantCrowd || !pref.sound || crowdSrc) return;   /* 加载期间可能已经离开档位 */
+      const now = ac.currentTime;
+      const src = ac.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      const g = ac.createGain();
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.exponentialRampToValueAtTime(CROWD_VOL, now + 1.1);   /* 淡入，别突然砸进来 */
+      src.connect(g); g.connect(masterBus(ac).input);
+      src.start(now);
+      crowdSrc = src; crowdGain = g;
+    });
+  }
+
+  function crowdOff() {
+    if (!crowdSrc) return;
+    const src = crowdSrc, g = crowdGain;
+    crowdSrc = null; crowdGain = null;
+    const now = actx ? actx.currentTime : 0;
+    try {
+      g.gain.cancelScheduledValues(now);
+      g.gain.setValueAtTime(Math.max(g.gain.value, 0.0002), now);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);      /* 淡出 */
+    } catch (e) {}
+    setTimeout(() => {
+      try { src.stop(); } catch (e) {}
+      try { src.disconnect(); g.disconnect(); } catch (e) {}
+    }, 1000);
+  }
+
+  /* 只在高档位响：换档、切音效开关时调用 */
+  function updateCrowd() {
+    wantCrowd = pref.sound && currentTier() >= CROWD_FROM;
+    if (wantCrowd) crowdOn(); else crowdOff();
+  }
+
   /* ================= 弹幕 ================= */
   const danmuEl = document.getElementById("danmu");
   const DANMU = [
@@ -1847,6 +1911,7 @@ var QRLib = (function () {
     pref.sound = !pref.sound;
     paintToggles();
     if (pref.sound) blip(currentTier());
+    updateCrowd();                    // 音效是总声音开关，关掉也把现场人声停掉
   });
   tgDanmu.addEventListener("click", () => {
     pref.danmu = !pref.danmu;
@@ -1856,14 +1921,17 @@ var QRLib = (function () {
   });
   paintToggles();
   danmuLoop();
+  updateCrowd();
 
-  /* 浏览器要求有用户手势才能出声：第一次按下后再补一次，避免"读档时弹幕已开但没声音" */
+  /* 浏览器要求有用户手势才能出声：第一次按下时预加载现场人声，等拖到夺冠档就不必再等 */
+  window.addEventListener("pointerdown", () => { loadCrowd(); updateCrowd(); }, { once: true });
 
-  /* ================= 档位切换时的反馈：音阶 + 震动 + 一条弹幕 ================= */
+  /* ================= 档位切换时的反馈：音阶 + 震动 + 一条弹幕 + 现场人声 ================= */
   function onTierChange(tier) {
     blip(tier);
     buzz(tier === N - 1 ? 28 : 9);
     if (pref.danmu) spawnDanmu(tier, false);
+    updateCrowd();                    // 只在夺冠/贾科斯两档有人声
   }
 })();
 </script>

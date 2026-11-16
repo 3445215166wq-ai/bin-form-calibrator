@@ -21,9 +21,7 @@ Single static page. No framework, no build step, no audio assets, no network cal
 - **One-tap share card.** Generates a 900×1200 framed image plus a copyable deep link. The QR code in the
   corner is **computed in the page** by a hand-written encoder (Reed-Solomon, format info, automatic mask
   selection) — no QR service, no library, and it doesn't taint the canvas, so export keeps working.
-- **All audio is synthesized.** Zero audio files: tier blips are WebAudio oscillators; the final tier is a
-  **formant-synthesized sung "aah"** (sawtooth glottal source + vibrato + three vowel formants + a
-  generated impulse-response reverb); enabling danmaku fades in a crowd murmur bed.
+- **Almost all audio is synthesized** — exactly one 48 KB audio file. Tier blips are WebAudio oscillators, and the final tier is a **formant-synthesized sung "aah"** (sawtooth glottal source + vibrato + three vowel formants + a generated impulse-response reverb). The trophy tiers add a real stadium crowd from a **CC0** recording (see `LICENSE-ASSETS`).
 - **Easter egg:** type `bin`, or long-press the title for 0.7 s.
 - Haptic feedback on mobile via `navigator.vibrate` (no toggle — it's always on).
 

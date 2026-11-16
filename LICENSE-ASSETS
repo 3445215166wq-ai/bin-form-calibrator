@@ -32,3 +32,14 @@
 
 **如果你要 fork 或复用：最稳妥的做法是删掉 `assets/`，换成你自己生成的素材。**
 代码本身不依赖任何特定图片内容，`index.html` 顶部的 `TIERS` 数组改一下路径就能跑。
+
+## 音频素材
+
+`assets/crowd.mp3` —— 截取自 Wikimedia Commons 的录音
+**"360703 eguobyte large-crowd-medium-distance-stereo.wav"**，
+作者 **eguobyte**，授权 **CC0 1.0（公有领域贡献，无需署名，此处仍注明来源）**。
+来源：https://commons.wikimedia.org/wiki/File:360703_eguobyte_large-crowd-medium-distance-stereo.wav
+
+处理方式：截取最热闹的 6 秒 → 单声道 44.1kHz → mp3 64kbps（48KB）→ 首尾 0.25s 淡变以便无缝循环 → 电平归一化。
+
+其余音效（档位音阶、圣光「啊」、隐藏档低频）均为 WebAudio 现场合成，**不含任何音频文件**。

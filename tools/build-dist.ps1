@@ -49,6 +49,7 @@ Copy-IfExists "assets/evolution.mp4"
 Copy-IfExists "assets/share.png"
 Copy-IfExists "assets/skin-gwen.jpg"
 Copy-IfExists "assets/skin-jax.jpg"
+Copy-IfExists "assets/crowd.mp3"
 
 # fallback stills (?img=1)
 # Always use forward slashes here: a backslash is a normal filename char on Linux
