@@ -130,8 +130,10 @@
     background-repeat:no-repeat;
     background-size:0% 100%;
   }
-  /* 白色小点：四层互质尺寸平铺 + 缓慢左右摆动 = 银河流动。
-     **只在拉满时出现**，平时 opacity 0（用户要求"没拉到顶之前不要星点"）。 */
+  /* 白色小点：四层互质尺寸平铺 + **单向朝右流** = 星河在走。
+     每层位移正好等于自己的平铺宽度，所以各自无缝循环、不用凑公倍数；
+     层与层速度不同 → 有前后景视差，比整体平移更像银河。
+     **只在拉满时出现**：平时 opacity 0 且动画暂停（不白耗重绘）。 */
   .fill::before{
     content:"";position:absolute;inset:0;
     background-image:
@@ -144,12 +146,13 @@
     background-repeat:repeat;
     opacity:0;
     transition:opacity .38s ease;
-    animation:starDrift 9s linear infinite alternate;
+    animation:starDrift 6s linear infinite;
+    animation-play-state:paused;
   }
-  .fill.full::before{opacity:1;animation-duration:4.5s}
+  .fill.full::before{opacity:1;animation-duration:2.2s;animation-play-state:running}
   @keyframes starDrift{
-    from{transform:translate3d(0,0,0)}
-    to  {transform:translate3d(-22px,0,0)}
+    from{background-position:0 5px,11px 10px,19px 3px,6px 7px}
+    to  {background-position:43px 5px,40px 10px,56px 3px,29px 7px}
   }
   /* 拉满：星点漂得更快，像通电到顶 */
   /* 刻度：按档位数动态生成，位置与滑片中心严格对齐（两端各留半个旋钮宽）。
@@ -1893,7 +1896,7 @@ var QRLib = (function () {
   /* ================= 弹幕 ================= */
   const danmuEl = document.getElementById("danmu");
   const DANMU = [
-    ["格温？", "这谁啊", "变身！", "难蹦", "剪刀娘", "怎么是格温", "皮肤罢了", "先耍一会"],
+    ["格温？", "这谁啊", "变身！", "难蹦", "剪刀娘", "牛逼", "皮肤罢了", "先耍一会"],
     ["大小姐驾到", "搞耍限定", "这腿", "别笑我", "娇气上单", "先臭美一下", "傲娇"],
     ["新人有点东西", "手有点抖", "这上单哪来的", "潜力股", "青涩", "可以啊小孩", "别紧张", "有天赋"],
     ["越塔！", "FMVP！", "bin！bin！bin！", "太猛了", "越塔跟喝水", "上单之神", "这波真猛", "稳得可怕"],
