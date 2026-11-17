@@ -118,16 +118,37 @@
   .tube{
     position:absolute;top:14px;left:0;right:0;height:22px;
     border-radius:99px;overflow:hidden;
-    background:#e9e4d9;
-    box-shadow:inset 0 1px 2px rgba(35,38,44,.10);
+    background:#eeeae0;
+    box-shadow:inset 0 1px 2px rgba(35,38,44,.09);
   }
-  /* 通电高光：只用 transform，绝不改宽度（避免每帧触发布局） */
+  /* 通电段＝银河渐变：左藕粉 → 紫 → 深紫，上面浮着细碎星点慢慢漂。
+     用 clip-path 露出来（不改宽度、也不缩放），星点才不会被横向拉长。 */
   .fill{
-    position:absolute;inset:0;border-radius:99px;
-    background:var(--grad);
-    transform:scaleX(0);transform-origin:0 50%;
-    will-change:transform;
+    position:absolute;inset:0;border-radius:99px;overflow:hidden;
+    background:linear-gradient(100deg,#f4b6d8 0%,#dda0e6 22%,#b483f2 48%,#8f61f6 74%,#7c48f0 100%);
+    clip-path:inset(0 100% 0 0);
+    will-change:clip-path;
   }
+  /* 五层不同周期的白色小点平铺 + 整体缓慢左右摆动 = 银河流动感。
+     点小、层多、周期互质，才散得开；左右往返摆动就不用凑"公倍数"也能无缝。 */
+  .fill::before{
+    content:"";position:absolute;inset:0;
+    background-image:
+      radial-gradient(circle, rgba(255,255,255,.92) 0 .50px, rgba(255,255,255,0) 1.05px),
+      radial-gradient(circle, rgba(255,255,255,.78) 0 .45px, rgba(255,255,255,0) .95px),
+      radial-gradient(circle, rgba(255,255,255,.66) 0 .40px, rgba(255,255,255,0) .90px),
+      radial-gradient(circle, rgba(255,255,255,.55) 0 .35px, rgba(255,255,255,0) .80px);
+    background-size:43px 15px,29px 13px,37px 11px,23px 9px;
+    background-position:0 5px,11px 10px,19px 3px,6px 7px;
+    background-repeat:repeat;
+    animation:starDrift 9s linear infinite alternate;
+  }
+  @keyframes starDrift{
+    from{transform:translate3d(0,0,0)}
+    to  {transform:translate3d(-22px,0,0)}
+  }
+  /* 拉满：星点漂得更快，像通电到顶 */
+  .fill.full::before{animation-duration:4.5s}
   /* 刻度：按档位数动态生成，位置与滑片中心严格对齐（两端各留半个旋钮宽）。
      每一格本身就是"直接跳到该档"的按钮——44×40 的大热区，不会按到隔壁。 */
   .stops{
@@ -169,54 +190,19 @@
     0%{opacity:.95;transform:scale(.45)}
     100%{opacity:0;transform:scale(3.2)}
   }
-  /* ── 滑片：银河渐变 ──────────────────────────────────────────────
-     只有这一个元素带"银河流动"效果：粉→紫→蓝→青的锥形渐变在内圈慢慢转，
-     外加星点和高光；--glow 由 JS 按滑条位置写入（0~1），拉到满时外发光最亮。 */
+  /* ── 滑片：干净的白色圆钮 ──────────────────────────────────────
+     银河只在"通电段"上，这里保持纯白高对比，手指/鼠标也看得清位置。 */
   .knob{
     position:absolute;top:25px;left:0;z-index:2;
     width:34px;height:34px;margin:-17px 0 0 0;padding:0;
-    border:1px solid rgba(255,255,255,.62);
-    border-radius:50%;overflow:hidden;          /* 让转动的渐变被裁成圆 */
-    background:#2d63e0;
+    border:1px solid rgba(35,38,44,.10);
+    border-radius:50%;
+    background:#fff;
     box-shadow:
-      0 1px 2px rgba(35,38,44,.22),
-      0 4px 10px -5px rgba(35,38,44,.45),
-      0 0 calc(var(--glow,0) * 16px) calc(var(--glow,0) * 3px) rgba(154,108,255,.60);
+      0 1px 2px rgba(35,38,44,.16),
+      0 2px 6px -2px rgba(35,38,44,.30);
     cursor:grab;touch-action:none;
     will-change:transform;
-    transition:box-shadow .18s linear;
-  }
-  /* 流动的主体：深空底 + 几团星云，整体慢慢转 */
-  .knob::before{
-    content:"";position:absolute;left:-45%;top:-45%;width:190%;height:190%;
-    background:
-      radial-gradient(circle at 28% 32%, rgba(255,60,140,.95) 0%, rgba(255,60,140,0) 48%),
-      radial-gradient(circle at 74% 30%, rgba(45,110,255,.95) 0%, rgba(45,110,255,0) 50%),
-      radial-gradient(circle at 50% 80%, rgba(150,80,255,.95) 0%, rgba(150,80,255,0) 48%),
-      #150f2e;
-    animation:galaxySpin 14s linear infinite;
-    will-change:transform;
-  }
-  /* 指示针 → 核心亮点 → 星点 → 边缘暗角（暗角压在最下面，做出球体纵深） */
-  .knob::after{
-    content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;
-    background:
-      linear-gradient(#fff,#fff) 50% 5px/2px 8px no-repeat,
-      radial-gradient(circle at 50% 47%, rgba(255,255,255,.95) 0 1.1px, rgba(255,255,255,0) 6px),
-      radial-gradient(circle at 63% 25%, #fff 0 .6px, rgba(255,255,255,0) 1px),
-      radial-gradient(circle at 31% 64%, rgba(255,255,255,.9) 0 .55px, rgba(255,255,255,0) .95px),
-      radial-gradient(circle at 75% 63%, rgba(255,255,255,.85) 0 .6px, rgba(255,255,255,0) 1px),
-      radial-gradient(circle at 42% 82%, rgba(255,255,255,.7) 0 .5px, rgba(255,255,255,0) .9px),
-      radial-gradient(circle at 24% 42%, rgba(255,255,255,.6) 0 .45px, rgba(255,255,255,0) .85px),
-      radial-gradient(circle at 50% 50%, rgba(21,15,46,0) 56%, rgba(21,15,46,.92) 100%);
-  }
-  @keyframes galaxySpin{to{transform:rotate(360deg)}}
-  /* 拉满：外圈多一道缓慢呼吸的光晕 */
-  .knob.full::before{animation-duration:2.6s}
-  .knob.full{animation:knobBreath 1.8s ease-in-out infinite}
-  @keyframes knobBreath{
-    0%,100%{box-shadow:0 1px 2px rgba(35,38,44,.22),0 4px 10px -5px rgba(35,38,44,.45),0 0 14px 2px rgba(154,108,255,.55)}
-    50%    {box-shadow:0 1px 2px rgba(35,38,44,.22),0 4px 10px -5px rgba(35,38,44,.45),0 0 24px 7px rgba(120,140,255,.80)}
   }
   .knob:active{cursor:grabbing}
   .knob:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
@@ -413,9 +399,9 @@
     .stage{height:min(42vh,150vw,320px);height:min(42dvh,150vw,320px)}
     .quip,.foot{display:none}
   }
-  /* 尊重"减少动态效果"：银河停止转动，也不呼吸 */
+  /* 尊重"减少动态效果"：星点不再漂 */
   @media (prefers-reduced-motion:reduce){
-    .knob::before,.knob.full{animation:none}
+    .fill::before{animation:none}
   }
 </style>
 </head>
@@ -587,7 +573,7 @@
   let p = 0;
   let dragging = false;
   let lastPct = -1, lastTier = -1;
-let lastGlow = -1;                 /* 滑片银河发光的档位（0~1，按 0.05 量化，避免每帧写样式） */
+let lastFull = false;              /* 通电段是否已拉满（只在阈值变化时改 class） */
   let userTouched = false;   // 用户动过之后才让档位切换发声/震动，避免一进页面就响
   let usable = 0;
   let useVideo = false;
@@ -910,16 +896,12 @@ let lastGlow = -1;                 /* 滑片银河发光的档位（0~1，按 0.
     /* 位置只用 transform，不碰 layout */
     const x = usable * p;
     knob.style.transform = "translate3d(" + x + "px,0,0)";
-    fill.style.transform = "scaleX(" + p + ")";
+    /* 通电段用 clip-path 露出：不改宽度、也不缩放，星点才不会被横向拉长 */
+    fill.style.clipPath = "inset(0 " + ((1 - p) * 100).toFixed(2) + "% 0 0)";
 
-    /* 滑片银河光：越往右越亮，拉满时进入"呼吸"状态。
-       量化到 0.05 再写，拖动时才不会每帧改一次 box-shadow。 */
-    const glow = Math.round(p * p * 20) / 20;
-    if (glow !== lastGlow) {
-      knob.style.setProperty("--glow", String(glow));
-      knob.classList.toggle("full", glow >= 0.95);
-      lastGlow = glow;
-    }
+    /* 拉满时星点漂得更快（只在跨越阈值时写一次） */
+    const full = p >= 0.985;
+    if (full !== lastFull) { fill.classList.toggle("full", full); lastFull = full; }
 
     /* 文案改动才写 DOM */
     const tier = tierForP(p);
