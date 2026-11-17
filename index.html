@@ -240,12 +240,12 @@
   .quip{margin:6px 0 0;font-size:11.5px;color:var(--muted);text-align:center;min-height:1.3em}
   .foot{margin:11px 0 0;font-size:10.5px;color:var(--faint);text-align:center;line-height:1.65}
 
-  /* ---------- 操作按钮：四个一排，一进来就能看见 ---------- */
-  .controls{display:flex;gap:7px;justify-content:center;align-items:center;flex-wrap:wrap;margin:12px 0 0}
+  /* ---------- 操作按钮：一排放下五个（复位/分享/音效/弹幕/特效） ---------- */
+  .controls{display:flex;gap:5px;justify-content:center;align-items:center;flex-wrap:wrap;margin:12px 0 0}
   .btn{
-    font:inherit;font-size:12.5px;font-weight:600;color:#3c4148;
-    height:32px;padding:0 14px;border-radius:99px;
-    display:inline-flex;align-items:center;gap:5px;
+    font:inherit;font-size:12px;font-weight:600;color:#3c4148;
+    height:32px;padding:0 10px;border-radius:99px;
+    display:inline-flex;align-items:center;gap:4px;
     background:var(--card);
     border:1px solid var(--line2);
     box-shadow:0 1px 1px rgba(35,38,44,.05);
@@ -255,11 +255,11 @@
   .btn:hover{background:#fff;border-color:#bcb4a4;color:#1b1e23}
   .btn:active{transform:scale(.97)}
 
-  /* 开关（音效 / 弹幕）：和按钮同一排 */
+  /* 开关（音效 / 弹幕 / 特效）：和按钮同一排 */
   .tg{
-    font:inherit;font-size:11.5px;font-weight:600;color:var(--muted);
-    height:32px;padding:0 12px;border-radius:99px;
-    display:inline-flex;align-items:center;gap:5px;
+    font:inherit;font-size:11px;font-weight:600;color:var(--muted);
+    height:32px;padding:0 9px;border-radius:99px;
+    display:inline-flex;align-items:center;gap:4px;
     background:transparent;border:1px solid var(--line2);
     cursor:pointer;user-select:none;transition:background .16s,border-color .16s,color .16s;
   }
@@ -416,6 +416,8 @@
   @media (prefers-reduced-motion:reduce){
     .fill::before{animation:none}
   }
+  /* 「✨ 特效」关掉时，星河星点也一起藏起来（撒花由 JS 停） */
+  body.nofx .fill.full::before{opacity:0}
 </style>
 </head>
 <body>
@@ -456,6 +458,7 @@
     <button class="btn" id="btnShare">📤 分享</button>
     <button class="tg on" id="tgSound">🔊 音效</button>
     <button class="tg" id="tgDanmu">💬 弹幕</button>
+    <button class="tg on" id="tgFx">✨ 特效</button>
   </div>
 
   <p class="foot">纯属娱乐二创 · 与选手本人及战队无关<br>← → 也能拨，Home / End 到头</p>
@@ -978,7 +981,7 @@ function gradColors(t) {
       knob.setAttribute("aria-valuetext", pct + "% · " + TIERS[tier].name);
       stopEls.forEach((s, i) => s.classList.toggle("on", i === tier));
       if (userTouched) onTierChange(tier);
-      fxConfetti(tier === FX_TIER);      /* 只在夺冠档撒花 */
+      fxConfetti(fxAllowed && FX_TIERS.indexOf(tier) >= 0);   /* 先锋赛/夺冠/贾科斯 撒花 */
       lastTier = tier;
     }
   }
@@ -1082,7 +1085,11 @@ function gradColors(t) {
      ②进入夺冠档时把全屏铺满（从各种高度开始，不会"从空屏慢慢下"）；
      ③落到底部就回到顶部、随机换一列 —— 所以是**一直循环飘**，不是喷一波；
      ④离开夺冠档停止循环，等最后几片落完自动停 rAF。 */
-  const FX_TIER = 5;                       /* 夺冠！意气风发！ */
+  /* 会撒花的档位：先锋赛 FMVP / 夺冠 / 贾科斯 —— 和现场人声的档位一致 */
+  const FX_TIERS = [3, 5, 6];
+  /* 「✨ 特效」开关的镜像。pref 定义在后面（render 启动时还没初始化），
+     所以 render 只读这个布尔，由 paintToggles 同步过来。 */
+  let fxAllowed = true;
   const fxEl = document.getElementById("fx");
   const fxc  = fxEl.getContext("2d");
   const FX_PARTS = [];
@@ -1807,7 +1814,9 @@ var QRLib = (function () {
     get sound() { return localStorage.getItem("bs.sound") !== "0"; },   /* 默认开 */
     set sound(v) { localStorage.setItem("bs.sound", v ? "1" : "0"); },
     get danmu() { return localStorage.getItem("bs.danmu") === "1"; },   /* 默认关 */
-    set danmu(v) { localStorage.setItem("bs.danmu", v ? "1" : "0"); }
+    set danmu(v) { localStorage.setItem("bs.danmu", v ? "1" : "0"); },
+    get fx() { return localStorage.getItem("bs.fx") !== "0"; },         /* 默认开 */
+    set fx(v) { localStorage.setItem("bs.fx", v ? "1" : "0"); }
   };
 
   function audioCtx() {
@@ -2180,9 +2189,13 @@ var QRLib = (function () {
   /* ================= 开关 ================= */
   const tgSound = document.getElementById("tgSound");
   const tgDanmu = document.getElementById("tgDanmu");
+  const tgFx    = document.getElementById("tgFx");
   function paintToggles() {
     tgSound.classList.toggle("on", pref.sound);
     tgDanmu.classList.toggle("on", pref.danmu);
+    tgFx.classList.toggle("on", pref.fx);
+    fxAllowed = pref.fx;
+    document.body.classList.toggle("nofx", !pref.fx);   /* 关特效时连星河星点一起藏掉 */
   }
   tgSound.addEventListener("click", () => {
     pref.sound = !pref.sound;
@@ -2195,6 +2208,12 @@ var QRLib = (function () {
     paintToggles();
     danmuLoop();
     if (!pref.danmu) danmuEl.innerHTML = "";
+  });
+  tgFx.addEventListener("click", () => {
+    pref.fx = !pref.fx;
+    paintToggles();
+    /* 关掉立刻收掉正在飘的纸屑；打开时如果正停在撒花档就重新铺 */
+    fxConfetti(pref.fx && FX_TIERS.indexOf(currentTier()) >= 0);
   });
   paintToggles();
   danmuLoop();
