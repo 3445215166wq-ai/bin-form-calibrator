@@ -108,6 +108,26 @@
   .tag i{flex:0 0 11px;width:11px;height:2px;border-radius:1px;display:block;
     background:linear-gradient(90deg,#ff9dc0,#8fb2ff)}
   /* 高清素材（视频）还在下载时给个提示，避免以为画面卡住了 */
+  /* 静音开关：贴在画面右下角的小喇叭，点一下打叉（不再占控件行） */
+  .snd{
+    position:absolute;right:10px;bottom:10px;z-index:4;
+    width:30px;height:30px;padding:0;border:0;border-radius:50%;
+    display:grid;place-items:center;cursor:pointer;
+    background:rgba(20,22,26,.42);
+    -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+    transition:background .16s,transform .12s;
+  }
+  .snd:active{transform:scale(.94)}
+  .snd:focus-visible{outline:2px solid #fff;outline-offset:2px}
+  .snd svg{width:17px;height:17px;display:block}
+  .snd .spk{fill:#fff;transition:fill .15s}
+  .snd .wave,.snd .slash{fill:none;stroke:#fff;stroke-width:1.7;stroke-linecap:round;transition:opacity .15s}
+  .snd .slash{opacity:0}
+  /* 关掉时：声波消失、喇叭变暗、打一道斜叉 */
+  .snd:not(.on) .wave{opacity:0}
+  .snd:not(.on) .slash{opacity:1}
+  .snd:not(.on) .spk{fill:rgba(255,255,255,.55)}
+
   .loading{
     position:absolute;right:12px;top:12px;z-index:4;
     font-size:10.5px;letter-spacing:.04em;color:#cdd9ef;
@@ -432,6 +452,14 @@
     <video id="vid" muted playsinline preload="auto"></video>
     <div class="danmu" id="danmu"></div>
     <div class="tag"><i></i><span id="tag">稚嫩 bin 哥</span></div>
+    <button class="snd on" id="tgSound" aria-label="音效开关" aria-pressed="true">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path class="spk" d="M4 9.3h3.1L12 5.6v12.8L7.1 14.7H4z"/>
+        <path class="wave" d="M15.2 8.9a4.6 4.6 0 0 1 0 6.2"/>
+        <path class="wave w2" d="M17.9 6.2a8.4 8.4 0 0 1 0 11.6"/>
+        <line class="slash" x1="4.6" y1="19.4" x2="19.4" y2="4.6"/>
+      </svg>
+    </button>
     <div class="loading" id="loading">高清素材加载中…</div>
     <div class="secret" id="secret">
       <img src="assets/opt/3.jpg" alt="">
@@ -456,11 +484,9 @@
   <div class="controls">
     <button class="btn" id="btnReset">↺ 复位</button>
     <button class="btn" id="btnShare">📤 分享</button>
-    <button class="tg on" id="tgSound">🔊 音效</button>
     <button class="tg" id="tgDanmu">💬 弹幕</button>
     <button class="tg on" id="tgFx">✨ 特效</button>
   </div>
-
   <p class="foot">纯属娱乐二创 · 与选手本人及战队无关<br>← → 也能拨，Home / End 到头</p>
 </div>
 <div class="toast" id="toast"></div>
@@ -2192,6 +2218,7 @@ var QRLib = (function () {
   const tgFx    = document.getElementById("tgFx");
   function paintToggles() {
     tgSound.classList.toggle("on", pref.sound);
+    tgSound.setAttribute("aria-pressed", pref.sound ? "true" : "false");
     tgDanmu.classList.toggle("on", pref.danmu);
     tgFx.classList.toggle("on", pref.fx);
     fxAllowed = pref.fx;
