@@ -82,6 +82,8 @@
 
   /* 视频模式：视频藏在画面外，只把解码出来的当前帧画到 canvas */
   #cv{position:absolute;inset:0;z-index:1;width:100%;height:100%;display:none}
+  /* 撒花层：压在画面上、在档位标签和弹幕之下，不吃点击 */
+  #fx{position:absolute;inset:0;z-index:3;width:100%;height:100%;pointer-events:none}
   .stage.video #cv{display:block}
   .stage.video #layers{display:none}
   #vid{position:absolute;left:-9999px;top:0;width:2px;height:2px;opacity:0;pointer-events:none}
@@ -421,6 +423,7 @@
     <div id="layers"></div>
     <canvas id="cv"></canvas>
     <video id="vid" muted playsinline preload="auto"></video>
+    <canvas id="fx"></canvas>
     <div class="danmu" id="danmu"></div>
     <div class="tag"><i></i><span id="tag">稚嫩 bin 哥</span></div>
     <div class="loading" id="loading">高清素材加载中…</div>
@@ -970,6 +973,7 @@ function gradColors(t) {
       knob.setAttribute("aria-valuetext", pct + "% · " + TIERS[tier].name);
       stopEls.forEach((s, i) => s.classList.toggle("on", i === tier));
       if (userTouched) onTierChange(tier);
+      fxConfetti(tier === FX_TIER);      /* 只在夺冠档撒花 */
       lastTier = tier;
     }
   }
@@ -1062,8 +1066,121 @@ function gradColors(t) {
        跳过重绘的缓存在这里要清掉。 */
     frameLast = { a: -1, b: -1, t: -1 };
     if (framesMode) { sizeCanvas(); }
+    resizeFx();
     render();
   });
+
+  /* ================= 撒花（夺冠档） =================
+     独立一层 canvas 叠在画面上，和视频擦洗那张 canvas 完全解耦。
+     要点：①纸屑先用离屏 canvas 预渲染成贴图，每帧只 drawImage，不重画路径；
+     ②对象池复用、落出画面即回收；③只在夺冠档开启，离开就停止生成、等最后几片落完自动停 rAF。 */
+  const FX_TIER = 5;                       /* 夺冠！意气风发！ */
+  const fxEl = document.getElementById("fx");
+  const fxc  = fxEl.getContext("2d");
+  const FX_MAX = 150;
+  const FX_PARTS = [];
+  const FX_SPRITES = [];
+  let fxW = 0, fxH = 0, fxDpr = 1, fxOn = false, fxRunning = false, fxAcc = 0, fxLast = 0;
+  const fxReduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches);
+
+  (function buildSprites() {
+    const colors = ["#f0447f", "#ff86b4", "#2d63e0", "#6aa8ff", "#ffffff", "#dfe6f5", "#a45ae8"];
+    const sizes = [[11, 6], [8, 8], [14, 5], [7, 11]];
+    colors.forEach(function (col) {
+      sizes.forEach(function (sz) {
+        const pad = 2, w = sz[0], h = sz[1], r = Math.min(w, h) / 2;
+        const c = document.createElement("canvas");
+        c.width = w + pad * 2; c.height = h + pad * 2;
+        const g = c.getContext("2d");
+        g.fillStyle = col;
+        g.beginPath();
+        g.moveTo(pad + r, pad);
+        g.arcTo(pad + w, pad, pad + w, pad + h, r);
+        g.arcTo(pad + w, pad + h, pad, pad + h, r);
+        g.arcTo(pad, pad + h, pad, pad, r);
+        g.arcTo(pad, pad, pad + w, pad, r);
+        g.closePath(); g.fill();
+        FX_SPRITES.push({ cv: c, w: c.width, h: c.height });
+      });
+    });
+  })();
+
+  function resizeFx() {
+    const r = stage.getBoundingClientRect();
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    fxDpr = dpr;
+    fxW = Math.max(1, Math.round(r.width));
+    fxH = Math.max(1, Math.round(r.height));
+    const bw = Math.round(fxW * dpr), bh = Math.round(fxH * dpr);
+    if (fxEl.width !== bw || fxEl.height !== bh) {
+      fxEl.width = bw; fxEl.height = bh;
+      fxc.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+  }
+
+  function fxSpawn(n) {
+    for (let k = 0; k < n; k++) {
+      if (FX_PARTS.length >= FX_MAX) return;
+      const s = FX_SPRITES[(Math.random() * FX_SPRITES.length) | 0];
+      FX_PARTS.push({
+        s: s,
+        x: Math.random() * fxW,
+        y: -s.h - Math.random() * fxH * 0.35,
+        vx: (Math.random() - 0.5) * 22,
+        vy: 55 + Math.random() * 95,
+        rot: Math.random() * 6.283,
+        vr: (Math.random() - 0.5) * 7,
+        sw: Math.random() * 6.283,
+        sws: 1.1 + Math.random() * 1.7,
+        a: 0.72 + Math.random() * 0.28
+      });
+    }
+  }
+
+  function fxStep(t) {
+    const dt = Math.min(0.05, ((t - fxLast) / 1000) || 0.016);
+    fxLast = t;
+    fxc.clearRect(0, 0, fxW, fxH);
+    for (let i = FX_PARTS.length - 1; i >= 0; i--) {
+      const p = FX_PARTS[i];
+      p.vy += 230 * dt;                            /* 重力 */
+      p.sw += p.sws * dt;
+      p.x += (p.vx + Math.sin(p.sw) * 30) * dt;    /* 左右飘 */
+      p.y += p.vy * dt;
+      p.rot += p.vr * dt;
+      if (p.y > fxH + 40 || p.x < -60 || p.x > fxW + 60) { FX_PARTS.splice(i, 1); continue; }
+      /* 用 setTransform 直接拼矩阵：比 save/translate/rotate/scale/restore 少四次调用 */
+      const cs = Math.cos(p.rot), sn = Math.sin(p.rot);
+      const sx = fxDpr, sy = fxDpr * (0.25 + 0.75 * Math.abs(Math.cos(p.sw * 1.6)));  /* 纸片翻面 */
+      fxc.globalAlpha = p.a;
+      fxc.setTransform(cs * sx, sn * sx, -sn * sy, cs * sy, p.x * fxDpr, p.y * fxDpr);
+      fxc.drawImage(p.s.cv, -p.s.w / 2, -p.s.h / 2);
+    }
+    fxc.globalAlpha = 1;
+    fxc.setTransform(fxDpr, 0, 0, fxDpr, 0, 0);
+    if (fxOn && !fxReduced) {
+      fxAcc += dt;
+      const every = 0.045;
+      while (fxAcc > every) { fxAcc -= every; fxSpawn(1); }
+    }
+    if (FX_PARTS.length || (fxOn && !fxReduced)) {
+      requestAnimationFrame(fxStep);
+    } else {
+      fxRunning = false;
+      fxc.clearRect(0, 0, fxW, fxH);
+    }
+  }
+
+  function fxConfetti(on) {
+    if (on === fxOn) return;
+    fxOn = on;
+    if (on) {
+      resizeFx();
+      fxAcc = 0;
+      fxSpawn(fxReduced ? 20 : 70);                /* 刚进夺冠档先喷一波 */
+      if (!fxRunning) { fxRunning = true; fxLast = performance.now(); requestAnimationFrame(fxStep); }
+    }
+  }
 
   /* ---------- 启动 ---------- */
   /* 默认停在「稚嫩 bin 哥」那一档；?t=序号（1 起）可直达任意档，?p=0~100 仍兼容 */
