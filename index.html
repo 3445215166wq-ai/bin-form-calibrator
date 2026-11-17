@@ -19,7 +19,10 @@
     --ink:#23262c;
     --muted:#7b7f87;
     --faint:#a6a9af;
-    --gold:#b0812c;        /* 压暗的金，去掉霓虹味 */
+    /* BLG 配色：左粉右蓝 */
+    --pink:#f0447f;
+    --blue:#2d63e0;
+    --grad:linear-gradient(90deg,var(--pink),var(--blue));
     --line:#e5e0d6;
     --line2:#d3ccbe;
   }
@@ -44,8 +47,13 @@
     font-family:Arial,sans-serif;font-weight:700;
   }
   h1{margin:0;font-size:clamp(20px,5vw,25px);font-weight:800;letter-spacing:.01em;color:var(--ink)}
-  /* 「bin氏」连写并上色，「滑动变阻器」保持黑体本色 —— 中间不要空格 */
-  h1 em{font-style:normal;color:var(--gold);letter-spacing:0}
+  /* 「bin氏」连写，套蓝粉渐变；「滑动变阻器」保持黑体本色 —— 中间不要空格 */
+  h1 em{
+    font-style:normal;letter-spacing:0;
+    color:var(--pink);                      /* 兜底：不支持渐变文字时是粉的 */
+    background-image:var(--grad);
+    -webkit-background-clip:text;background-clip:text;
+  }
   .intro{margin:7px 0 14px;font-size:12.5px;color:var(--muted);letter-spacing:.05em}
 
   /* ---------- 舞台 ----------
@@ -90,7 +98,8 @@
     -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
     text-shadow:0 1px 3px rgba(0,0,0,.6);
   }
-  .tag i{flex:0 0 11px;width:11px;height:1px;background:#e6b25e;display:block}
+  .tag i{flex:0 0 11px;width:11px;height:2px;border-radius:1px;display:block;
+    background:linear-gradient(90deg,#ff9dc0,#8fb2ff)}
   /* 高清素材（视频）还在下载时给个提示，避免以为画面卡住了 */
   .loading{
     position:absolute;right:12px;top:12px;z-index:4;
@@ -115,7 +124,7 @@
   /* 通电高光：只用 transform，绝不改宽度（避免每帧触发布局） */
   .fill{
     position:absolute;inset:0;border-radius:99px;
-    background:var(--gold);
+    background:var(--grad);
     transform:scaleX(0);transform-origin:0 50%;
     will-change:transform;
   }
@@ -145,15 +154,15 @@
     color:var(--faint);font-variant-numeric:tabular-nums;
     transition:color .15s;
   }
-  .stop.on .mark{height:17px;background:var(--gold)}
-  .stop.on .num{color:var(--gold);font-weight:700}
+  .stop.on .mark{height:17px;background:linear-gradient(180deg,var(--pink),var(--blue))}
+  .stop.on .num{color:var(--blue);font-weight:700}
   .stop:hover .mark{background:#8d8577}
   .stop:active .mark{transform:scaleY(.65)}
-  .stop:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:10px}
-  /* 点击瞬间的金圈扩散：明确的"我点到了" */
+  .stop:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:10px}
+  /* 点击瞬间的扩散圈：明确的"我点到了" */
   .stop .ring{
     position:absolute;left:50%;top:7px;width:14px;height:14px;margin:-7px 0 0 -7px;
-    border-radius:50%;border:2px solid var(--gold);opacity:0;pointer-events:none;
+    border-radius:50%;border:2px solid var(--pink);opacity:0;pointer-events:none;
   }
   .stop.hit .ring{animation:ringOut .42s ease-out}
   @keyframes ringOut{
@@ -173,10 +182,11 @@
     will-change:transform;
   }
   .knob:active{cursor:grabbing}
-  .knob:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+  .knob:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
   .knob::after{
     content:"";position:absolute;left:50%;top:50%;
-    width:2px;height:10px;margin:-10px 0 0 -1px;border-radius:2px;background:var(--gold);
+    width:2px;height:10px;margin:-10px 0 0 -1px;border-radius:2px;
+    background:linear-gradient(180deg,var(--pink),var(--blue));
   }
   /* 点刻度跳档时滑片追过去的过渡；一旦开始拖动这个类会被摘掉，保证 1:1 跟手 */
   .rheostat.jumping .knob{transition:transform .26s cubic-bezier(.22,.9,.22,1)}
@@ -186,7 +196,16 @@
     margin:11px 0 0;font-size:12.5px;color:#4d525a;letter-spacing:.04em;
     font-variant-numeric:tabular-nums;text-align:center;min-height:1.4em;
   }
-  .status b{color:var(--gold);font-weight:800}
+  .status b{
+    font-weight:800;
+    color:var(--pink);
+    background-image:var(--grad);
+    -webkit-background-clip:text;background-clip:text;
+  }
+  /* 渐变文字：支持 background-clip:text 才把字填充变透明（否则留粉色实心兜底） */
+  @supports ((-webkit-background-clip:text) or (background-clip:text)){
+    h1 em,.status b{color:transparent;-webkit-text-fill-color:transparent}
+  }
   .quip{margin:6px 0 0;font-size:11.5px;color:var(--muted);text-align:center;min-height:1.3em}
   .foot{margin:11px 0 0;font-size:10.5px;color:var(--faint);text-align:center;line-height:1.65}
 
@@ -213,9 +232,9 @@
     background:transparent;border:1px solid var(--line2);
     cursor:pointer;user-select:none;transition:background .16s,border-color .16s,color .16s;
   }
-  .tg.on{color:#fff;background:var(--gold);border-color:var(--gold);font-weight:700}
+  .tg.on{color:#fff;background:var(--grad);border-color:transparent;font-weight:700}
   .tg:hover{border-color:#bcb4a4;color:#3c4148}
-  .tg.on:hover{color:#fff;border-color:var(--gold)}
+  .tg.on:hover{color:#fff;border-color:transparent;filter:brightness(1.06)}
 
   /* ---------- 分享预览弹层 ---------- */
   .sheet{
@@ -252,15 +271,15 @@
     background:#faf8f3;border:1px solid var(--line2);
     border-radius:10px;padding:0 11px;height:38px;
   }
-  .sheet-url input:focus{outline:1px solid var(--gold)}
+  .sheet-url input:focus{outline:1px solid var(--blue)}
   .sheet-url .btn{height:38px;flex:0 0 auto;font-size:13.5px}
   .sheet-ft{display:flex;gap:8px;margin:10px 0 0}
   .sheet-ft .btn{flex:1;justify-content:center;height:44px;font-size:15px}
   .sheet-ok{
-    background:var(--gold);border-color:var(--gold);
+    background:var(--grad);border-color:transparent;
     color:#fff;font-weight:800;
   }
-  .sheet-ok:hover{background:#9c7026;border-color:#9c7026;color:#fff}
+  .sheet-ok:hover{filter:brightness(1.06);border-color:transparent;color:#fff}
 
   /* 弹幕（z-index 要比隐藏档高，否则骂声会被盖住） */
   .danmu{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:6}
@@ -1375,23 +1394,33 @@ var QRLib = (function () {
     c.width = W; c.height = H;
     const g = c.getContext("2d");
 
-    /* 底 + 顶部微光 */
+    /* 底 + 顶部双色微光（左粉右蓝） */
     g.fillStyle = "#070a11";
     g.fillRect(0, 0, W, H);
-    const gl = g.createRadialGradient(W / 2, -140, 40, W / 2, -140, 820);
-    gl.addColorStop(0, "rgba(255,202,77,.22)");
-    gl.addColorStop(1, "rgba(255,202,77,0)");
-    g.fillStyle = gl;
+    const glL = g.createRadialGradient(W * 0.12, -120, 40, W * 0.12, -120, 720);
+    glL.addColorStop(0, "rgba(240,68,127,.30)");
+    glL.addColorStop(1, "rgba(240,68,127,0)");
+    g.fillStyle = glL;
+    g.fillRect(0, 0, W, 640);
+    const glR = g.createRadialGradient(W * 0.88, -120, 40, W * 0.88, -120, 720);
+    glR.addColorStop(0, "rgba(45,99,224,.30)");
+    glR.addColorStop(1, "rgba(45,99,224,0)");
+    g.fillStyle = glR;
     g.fillRect(0, 0, W, 640);
 
+    /* 左粉右蓝的渐变笔（卡片上所有装饰线都用它） */
+    const brand = g.createLinearGradient(0, 0, W, 0);
+    brand.addColorStop(0, "#f0447f");
+    brand.addColorStop(1, "#2d63e0");
+
     /* 双线边框 */
-    g.strokeStyle = "rgba(255,202,77,.55)"; g.lineWidth = 3;
+    g.strokeStyle = brand; g.lineWidth = 3;
     rrect(g, 16, 16, W - 32, H - 32, 26); g.stroke();
-    g.strokeStyle = "rgba(160,185,235,.20)"; g.lineWidth = 1;
+    g.strokeStyle = "rgba(255,255,255,.14)"; g.lineWidth = 1;
     rrect(g, 27, 27, W - 54, H - 54, 18); g.stroke();
 
-    /* 四角金色角标 */
-    g.strokeStyle = "rgba(255,202,77,.9)"; g.lineWidth = 3; g.lineCap = "round";
+    /* 四角角标 */
+    g.strokeStyle = brand; g.lineWidth = 3; g.lineCap = "round";
     const K = 30, M = 34;
     [[M, M, 1, 1], [W - M, M, -1, 1], [M, H - M, 1, -1], [W - M, H - M, -1, -1]]
       .forEach(function (a) {
@@ -1432,7 +1461,11 @@ var QRLib = (function () {
     g.font = "700 28px " + FONT;
     g.fillText("第 " + (tier + 1) + " 档", 64, B + 56);
 
-    g.fillStyle = "#ffca4d";
+    /* 档位名：左粉右蓝的渐变字 */
+    const nameGrad = g.createLinearGradient(64, 0, 64 + 520, 0);
+    nameGrad.addColorStop(0, "#ff5c92");
+    nameGrad.addColorStop(1, "#5f8bff");
+    g.fillStyle = nameGrad;
     g.font = "800 64px " + FONT;
     g.fillText(TIERS[tier].name, 64, B + 136);
 
@@ -1440,7 +1473,7 @@ var QRLib = (function () {
     g.font = "500 30px " + FONT;
     g.fillText("「" + TIERS[tier].quip + "」", 64, B + 196);
 
-    g.strokeStyle = "rgba(255,202,77,.3)"; g.lineWidth = 1;
+    g.strokeStyle = brand; g.lineWidth = 2;
     g.beginPath();
     g.moveTo(64, B + 232);
     g.lineTo(150, B + 232);

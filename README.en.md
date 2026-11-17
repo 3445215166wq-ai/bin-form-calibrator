@@ -24,9 +24,10 @@ Single static page. No framework, no build step, no network calls, and a single 
 - **Almost all audio is synthesized** — exactly one 59 KB audio file. Tier blips are WebAudio oscillators, and the final tier is a **formant-synthesized sung "aah"** (sawtooth glottal source + vibrato + three vowel formants + a generated impulse-response reverb). The three "trophy" tiers (FMVP / champion / final form) add a real stadium crowd taken from an **NFL Arrowhead Stadium** field recording (**CC BY-SA 4.0**, credited in `LICENSE-ASSETS`).
 - **Easter egg:** type `bin`, or long-press the title for 0.7 s.
 - Haptic feedback on mobile via `navigator.vibrate` (no toggle — it's always on).
-- **Flat paper-like light theme** (warm off-white + muted gold, no gradient glows), four controls on a single
-  row, and a stage whose height follows the viewport (`min(56dvh, 124vw, 520px)`) so nothing needs scrolling
-  on a small phone. Defaults: sound **on**, danmaku **off**.
+- **Flat paper-like light theme** (warm off-white with a blue→pink BLG brand gradient as the accent, no
+  gradient glows), four controls on a single row, and a stage whose height follows the viewport
+  (`min(56dvh, 124vw, 520px)`) so nothing needs scrolling on a small phone. Defaults: sound **on**,
+  danmaku **off**.
 
 ## Quick start
 
