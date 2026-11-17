@@ -37,6 +37,15 @@
     background:var(--bg);
     -webkit-font-smoothing:antialiased;
   }
+  /* 页面整体泛粉：只在拉到最左边时淡入（--pk 由 JS 按位置写，0~1） */
+  body::before{
+    content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background:
+      radial-gradient(115% 70% at 50% 0%, #ffd3e4 0%, transparent 62%),
+      radial-gradient(120% 80% at 50% 100%, #ffe6ef 0%, transparent 66%);
+    opacity:var(--pk,0);
+    transition:opacity .3s ease;
+  }
   .wrap{width:100%;max-width:430px;display:flex;flex-direction:column;align-items:center}
   /* 关键：纵向 flex 容器里的子元素一律不许被压缩，否则高度会被 flex-shrink 吃掉
      （.stage 的 aspect-ratio、.rheostat 的刻度定位都会因此错乱） */
@@ -223,8 +232,7 @@
     0%{opacity:.95;transform:scale(.45)}
     100%{opacity:0;transform:scale(3.2)}
   }
-  /* ── 滑片：干净的白色圆钮 ──────────────────────────────────────
-     银河只在"通电段"上，这里保持纯白高对比，手指/鼠标也看得清位置。 */
+  /* ── 滑片：默认纯白圆钮；拉到最左边时叠一层"白→粉"的渐变（--pk 0~1） ── */
   .knob{
     position:absolute;top:25px;left:0;z-index:2;
     width:34px;height:34px;margin:-17px 0 0 0;padding:0;
@@ -236,6 +244,13 @@
       0 2px 6px -2px rgba(35,38,44,.30);
     cursor:grab;touch-action:none;
     will-change:transform;
+  }
+  /* 粉色层：靠 --pk 淡入，白→粉的斜向渐变 */
+  .knob::before{
+    content:"";position:absolute;inset:-1px;border-radius:50%;
+    background:linear-gradient(140deg,#ffffff 0%,#ffc6dd 46%,#ff5f9e 100%);
+    opacity:var(--pk,0);
+    pointer-events:none;
   }
   .knob:active{cursor:grabbing}
   .knob:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
@@ -619,6 +634,7 @@
 let lastFull = false;              /* 通电段是否已拉满（只在阈值变化时改 class） */
 let prevP = -1, lastStep = -1, lastDir = 1;   /* 配色量化步长 / 拖动方向 */
 let lastSize = -1;                            /* 通电段宽度已写入的百分比（量化 0.2%） */
+let lastPk = -1;                              /* 左端粉色强度已写入的档位（量化 1/20） */
 
 /* 通电段的配色关键帧（三条色带各三个色标），按 p 线性插值：
    往左拉 → 越来越粉（浅粉→桃红）；中段 → 品牌粉紫蓝；拉满 → 深紫深蓝。
@@ -972,6 +988,14 @@ function gradColors(t) {
     if (pctSize !== lastSize) {
       fill.style.backgroundSize = pctSize + "% 100%";
       lastSize = pctSize;
+    }
+
+    /* 左端彩蛋：p 越靠近 0，滑片越"白→粉"、页面背景越泛粉。
+       0.18 以内线性起效，到 0.18 以上完全恢复白底。 */
+    const pk = Math.round(Math.max(0, Math.min(1, (0.18 - p) / 0.18)) * 20) / 20;
+    if (pk !== lastPk) {
+      document.documentElement.style.setProperty("--pk", String(pk));
+      lastPk = pk;
     }
 
     /* 通电段配色：越往右越深（最左全粉 → 中段粉紫蓝 → 最右深紫深蓝），
