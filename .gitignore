@@ -22,6 +22,8 @@ dist-fixed.zip
 
 # ---- 测试 / 调试产物 ----
 _v/
+_s/
+_smoke/
 _sc/
 _sh/
 _sh2/

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0b0d13">
+<meta name="theme-color" content="#f6f4ef">
 <title>bin 氏滑动变阻器 · 七种形态</title>
 <meta name="description" content="拖动滑片，把 bin 哥从格温拖到贾科斯：七种形态的滑动变阻器。">
 <meta property="og:type" content="website">
@@ -14,24 +14,25 @@
 <meta name="twitter:card" content="summary_large_image">
 <style>
   :root{
-    --bg:#0b0d13;
-    --ink:#eef3ff;
-    --muted:#818da6;
-    --gold:#ffca4d;
-    --line:rgba(160,185,235,.16);
+    --bg:#f6f4ef;          /* 暖白纸感，不是纯白也不是漆黑 */
+    --card:#fffefb;
+    --ink:#23262c;
+    --muted:#7b7f87;
+    --faint:#a6a9af;
+    --gold:#b0812c;        /* 压暗的金，去掉霓虹味 */
+    --line:#e5e0d6;
+    --line2:#d3ccbe;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{height:100%}
   body{
     margin:0;min-height:100%;
     display:flex;justify-content:center;
-    padding:clamp(22px,6vh,58px) 18px 34px;
+    padding:clamp(12px,3vh,26px) 16px 22px;
     font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
     color:var(--ink);
-    background:
-      radial-gradient(90% 55% at 50% 0%, #1a2236 0%, transparent 62%),
-      radial-gradient(70% 50% at 50% 105%, rgba(255,202,77,.10) 0%, transparent 60%),
-      var(--bg);
+    background:var(--bg);
+    -webkit-font-smoothing:antialiased;
   }
   .wrap{width:100%;max-width:430px;display:flex;flex-direction:column;align-items:center}
   /* 关键：纵向 flex 容器里的子元素一律不许被压缩，否则高度会被 flex-shrink 吃掉
@@ -39,20 +40,24 @@
   .wrap > *{flex:0 0 auto}
 
   .eyebrow{
-    margin:0 0 9px;font-size:10.5px;letter-spacing:.3em;color:var(--muted);
+    margin:0 0 7px;font-size:10px;letter-spacing:.26em;color:var(--faint);
     font-family:Arial,sans-serif;font-weight:700;
   }
-  h1{margin:0;font-size:clamp(21px,5.6vw,27px);font-weight:800;letter-spacing:.04em}
+  h1{margin:0;font-size:clamp(20px,5vw,25px);font-weight:800;letter-spacing:.03em}
   h1 em{font-style:normal;color:var(--gold)}
-  .intro{margin:9px 0 20px;font-size:12.5px;color:var(--muted);letter-spacing:.06em}
+  .intro{margin:7px 0 14px;font-size:12.5px;color:var(--muted);letter-spacing:.05em}
 
-  /* ---------- 舞台 ---------- */
+  /* ---------- 舞台 ----------
+     高度用 vh/vw 双限：手机够高就按 4:5 撑满，矮屏自动缩短，
+     保证下面那排按钮一进来就在屏幕里，不用滚。 */
   .stage{
-    position:relative;width:100%;aspect-ratio:4/5;
-    flex:0 0 auto;                    /* 关键：否则在纵向 flex 里会被压扁，aspect-ratio 失效 */
-    border-radius:18px;overflow:hidden;
-    background:#0e1219;border:1px solid var(--line);
-    box-shadow:0 30px 70px -34px #000;
+    position:relative;width:100%;
+    height:min(56vh,124vw,520px);
+    height:min(56dvh,124vw,520px);
+    flex:0 0 auto;                    /* 关键：否则在纵向 flex 里会被压扁 */
+    border-radius:16px;overflow:hidden;
+    background:#14161b;border:1px solid rgba(0,0,0,.10);
+    box-shadow:0 1px 2px rgba(0,0,0,.05),0 14px 30px -22px rgba(35,38,44,.55);
     user-select:none;
     transform:translateZ(0);          /* 独立合成层，避免整页重绘 */
   }
@@ -76,12 +81,15 @@
     background:linear-gradient(180deg,transparent,rgba(4,6,11,.86));
   }
   .tag{
-    position:absolute;left:14px;bottom:13px;z-index:3;
-    display:flex;align-items:center;gap:9px;
-    font-size:12px;font-weight:700;letter-spacing:.04em;
-    text-shadow:0 1px 6px rgba(0,0,0,.9);
+    position:absolute;left:13px;bottom:12px;z-index:3;
+    display:flex;align-items:center;gap:8px;
+    font-size:12px;font-weight:800;letter-spacing:.05em;color:#fff;
+    padding:4px 10px 4px 9px;border-radius:99px;
+    background:rgba(20,22,26,.42);
+    -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+    text-shadow:0 1px 3px rgba(0,0,0,.6);
   }
-  .tag i{flex:0 0 11px;width:11px;height:1px;background:var(--gold);display:block;opacity:.9}
+  .tag i{flex:0 0 11px;width:11px;height:1px;background:#e6b25e;display:block}
   /* 高清素材（视频）还在下载时给个提示，避免以为画面卡住了 */
   .loading{
     position:absolute;right:12px;top:12px;z-index:4;
@@ -94,21 +102,19 @@
 
   /* ---------- 变阻器 ---------- */
   .rheostat{
-    position:relative;width:100%;height:74px;margin-top:18px;
+    position:relative;width:100%;height:74px;margin-top:12px;
     touch-action:none;cursor:pointer;
   }
   .tube{
-    position:absolute;top:14px;left:0;right:0;height:24px;
+    position:absolute;top:14px;left:0;right:0;height:22px;
     border-radius:99px;overflow:hidden;
-    background:
-      repeating-linear-gradient(90deg,#39414f 0 2px,#7d879b 2px 3px,#39414f 3px 7px),
-      linear-gradient(180deg,#4b556a,#252b38);
-    box-shadow:inset 0 2px 6px rgba(0,0,0,.85), inset 0 -2px 4px rgba(255,255,255,.10);
+    background:#e9e4d9;
+    box-shadow:inset 0 1px 2px rgba(35,38,44,.10);
   }
   /* 通电高光：只用 transform，绝不改宽度（避免每帧触发布局） */
   .fill{
     position:absolute;inset:0;border-radius:99px;
-    background:linear-gradient(90deg,rgba(43,108,255,.18),rgba(255,202,77,.9));
+    background:var(--gold);
     transform:scaleX(0);transform-origin:0 50%;
     will-change:transform;
   }
@@ -130,17 +136,17 @@
   }
   .stop .mark{
     width:3px;height:13px;margin-top:1px;border-radius:1.5px;
-    background:rgba(206,225,255,.62);
-    transition:height .15s,background .15s,box-shadow .15s,transform .12s;
+    background:#c3bcac;
+    transition:height .15s,background .15s,transform .12s;
   }
   .stop .num{
     margin-top:5px;font-size:9.5px;line-height:1;letter-spacing:.02em;
-    color:rgba(170,190,220,.6);font-variant-numeric:tabular-nums;
+    color:var(--faint);font-variant-numeric:tabular-nums;
     transition:color .15s;
   }
-  .stop.on .mark{height:17px;background:var(--gold);box-shadow:0 0 10px rgba(255,202,77,.9)}
+  .stop.on .mark{height:17px;background:var(--gold)}
   .stop.on .num{color:var(--gold);font-weight:700}
-  .stop:hover .mark{background:rgba(255,255,255,.92)}
+  .stop:hover .mark{background:#8d8577}
   .stop:active .mark{transform:scaleY(.65)}
   .stop:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:10px}
   /* 点击瞬间的金圈扩散：明确的"我点到了" */
@@ -154,106 +160,106 @@
     100%{opacity:0;transform:scale(3.2)}
   }
   .knob{
-    position:absolute;top:26px;left:0;z-index:2;
-    width:36px;height:36px;margin:-18px 0 0 0;padding:0;border:none;
+    position:absolute;top:25px;left:0;z-index:2;
+    width:34px;height:34px;margin:-17px 0 0 0;padding:0;
+    border:1px solid #cdc6b7;
     border-radius:50%;
-    background:radial-gradient(circle at 38% 32%, #ffffff 0%, #dfe7f6 28%, #a9b6cd 55%, #6d788e 100%);
+    background:#fffefb;
     box-shadow:
-      0 6px 14px rgba(0,0,0,.55),
-      0 0 0 3px rgba(11,13,19,.9),
-      0 0 0 4px rgba(255,202,77,.55),
-      inset 0 -3px 6px rgba(0,0,0,.25);
+      0 1px 2px rgba(35,38,44,.20),
+      0 4px 10px -5px rgba(35,38,44,.40);
     cursor:grab;touch-action:none;
     will-change:transform;
   }
   .knob:active{cursor:grabbing}
-  .knob:focus-visible{outline:2px solid var(--gold);outline-offset:4px}
+  .knob:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
   .knob::after{
     content:"";position:absolute;left:50%;top:50%;
-    width:2px;height:11px;margin:-11px 0 0 -1px;border-radius:2px;background:#2b3345;
+    width:2px;height:10px;margin:-10px 0 0 -1px;border-radius:2px;background:var(--gold);
   }
   /* 点刻度跳档时滑片追过去的过渡；一旦开始拖动这个类会被摘掉，保证 1:1 跟手 */
   .rheostat.jumping .knob{transition:transform .26s cubic-bezier(.22,.9,.22,1)}
 
   /* ---------- 文案 ---------- */
   .status{
-    margin:14px 0 0;font-size:12.5px;color:#b9c6de;letter-spacing:.05em;
+    margin:11px 0 0;font-size:12.5px;color:#4d525a;letter-spacing:.04em;
     font-variant-numeric:tabular-nums;text-align:center;min-height:1.4em;
   }
   .status b{color:var(--gold);font-weight:800}
-  .quip{margin:7px 0 0;font-size:11.5px;color:#5f6c85;text-align:center;min-height:1.3em}
-  .foot{margin:14px 0 0;font-size:10.5px;color:#414b60;text-align:center;line-height:1.7}
+  .quip{margin:6px 0 0;font-size:11.5px;color:var(--muted);text-align:center;min-height:1.3em}
+  .foot{margin:11px 0 0;font-size:10.5px;color:var(--faint);text-align:center;line-height:1.65}
 
-  /* ---------- 操作按钮 ---------- */
-  .controls{display:flex;gap:8px;justify-content:center;margin:14px 0 0;flex-wrap:wrap}
+  /* ---------- 操作按钮：四个一排，一进来就能看见 ---------- */
+  .controls{display:flex;gap:7px;justify-content:center;align-items:center;flex-wrap:wrap;margin:12px 0 0}
   .btn{
-    font:inherit;font-size:12.5px;font-weight:600;color:#c9d5ec;
-    height:34px;padding:0 14px;border-radius:99px;
+    font:inherit;font-size:12.5px;font-weight:600;color:#3c4148;
+    height:32px;padding:0 14px;border-radius:99px;
     display:inline-flex;align-items:center;gap:5px;
-    background:rgba(255,255,255,.045);
-    border:1px solid rgba(160,185,235,.2);
+    background:var(--card);
+    border:1px solid var(--line2);
+    box-shadow:0 1px 1px rgba(35,38,44,.05);
     cursor:pointer;user-select:none;
     transition:background .16s,border-color .16s,color .16s,transform .12s;
   }
-  .btn:hover{background:rgba(255,255,255,.1);color:#fff;border-color:rgba(160,185,235,.36)}
+  .btn:hover{background:#fff;border-color:#bcb4a4;color:#1b1e23}
   .btn:active{transform:scale(.97)}
 
-  /* 开关（音效 / 弹幕） */
-  .toggles{display:flex;gap:8px;justify-content:center;margin:8px 0 0}
+  /* 开关（音效 / 弹幕）：和按钮同一排 */
   .tg{
-    font:inherit;font-size:11.5px;font-weight:600;color:#7d8ba6;
-    height:28px;padding:0 12px;border-radius:99px;
+    font:inherit;font-size:11.5px;font-weight:600;color:var(--muted);
+    height:32px;padding:0 12px;border-radius:99px;
     display:inline-flex;align-items:center;gap:5px;
-    background:transparent;border:1px solid rgba(160,185,235,.16);
-    cursor:pointer;user-select:none;transition:.16s;
+    background:transparent;border:1px solid var(--line2);
+    cursor:pointer;user-select:none;transition:background .16s,border-color .16s,color .16s;
   }
-  .tg.on{color:#0d1119;background:var(--gold);border-color:var(--gold);font-weight:800}
-  .tg:hover{color:#cfdcf5}
+  .tg.on{color:#fff;background:var(--gold);border-color:var(--gold);font-weight:700}
+  .tg:hover{border-color:#bcb4a4;color:#3c4148}
+  .tg.on:hover{color:#fff;border-color:var(--gold)}
 
   /* ---------- 分享预览弹层 ---------- */
   .sheet{
     position:fixed;inset:0;z-index:200;display:none;
-    background:rgba(3,5,9,.9);
+    background:rgba(35,38,44,.42);
     padding:10px;overflow:auto;
   }
   .sheet.on{display:flex;align-items:center;justify-content:center}
   .sheet-in{
     width:100%;max-width:520px;
-    background:#0b0f17;border:1px solid rgba(160,185,235,.22);
-    border-radius:18px;padding:12px;
-    box-shadow:0 30px 80px rgba(0,0,0,.75);
+    background:var(--card);border:1px solid var(--line);
+    border-radius:16px;padding:12px;
+    box-shadow:0 18px 50px -20px rgba(35,38,44,.55);
   }
   .sheet-hd{
     display:flex;align-items:center;justify-content:space-between;
-    font-size:14px;font-weight:700;color:#cfdcf5;margin:0 2px 9px;
+    font-size:14px;font-weight:700;color:var(--ink);margin:0 2px 9px;
   }
   .sheet-x{
-    font:inherit;font-size:17px;line-height:1;color:#7d8ba6;
+    font:inherit;font-size:17px;line-height:1;color:var(--muted);
     background:transparent;border:none;cursor:pointer;
     padding:4px 8px;border-radius:8px;transition:.15s;
   }
-  .sheet-x:hover{color:#fff;background:rgba(255,255,255,.08)}
+  .sheet-x:hover{color:var(--ink);background:#f1ede4}
   .sheet-pv{display:flex;justify-content:center}
   .sheet-pv canvas{
-    display:block;max-width:100%;max-height:60vh;width:auto;height:auto;
-    border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.55);
+    display:block;max-width:100%;max-height:58vh;width:auto;height:auto;
+    border-radius:10px;box-shadow:0 6px 20px -10px rgba(35,38,44,.45);
   }
-  .sheet-tip{margin:10px 2px 0;font-size:12.5px;color:#6f7f9c;text-align:center}
+  .sheet-tip{margin:10px 2px 0;font-size:12.5px;color:var(--muted);text-align:center}
   .sheet-url{display:flex;gap:8px;margin:10px 0 0}
   .sheet-url input{
-    flex:1;min-width:0;font:inherit;font-size:13px;color:#a8b6cf;
-    background:rgba(255,255,255,.05);border:1px solid rgba(160,185,235,.2);
+    flex:1;min-width:0;font:inherit;font-size:13px;color:#4d525a;
+    background:#faf8f3;border:1px solid var(--line2);
     border-radius:10px;padding:0 11px;height:38px;
   }
-  .sheet-url input:focus{outline:1px solid rgba(255,202,77,.5)}
+  .sheet-url input:focus{outline:1px solid var(--gold)}
   .sheet-url .btn{height:38px;flex:0 0 auto;font-size:13.5px}
   .sheet-ft{display:flex;gap:8px;margin:10px 0 0}
-  .sheet-ft .btn{flex:1;justify-content:center;height:46px;font-size:15px}
+  .sheet-ft .btn{flex:1;justify-content:center;height:44px;font-size:15px}
   .sheet-ok{
     background:var(--gold);border-color:var(--gold);
-    color:#141a24;font-weight:800;
+    color:#fff;font-weight:800;
   }
-  .sheet-ok:hover{background:#ffd97a;border-color:#ffd97a;color:#141a24}
+  .sheet-ok:hover{background:#9c7026;border-color:#9c7026;color:#fff}
 
   /* 弹幕（z-index 要比隐藏档高，否则骂声会被盖住） */
   .danmu{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:6}
@@ -331,13 +337,30 @@
   .secret .cap span{display:block;margin-top:8px;font-size:12px;color:#e7b6b6;letter-spacing:.08em}
 
   .toast{
-    position:fixed;left:50%;bottom:34px;transform:translateX(-50%) translateY(12px);
+    position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(10px);
     padding:9px 16px;border-radius:99px;font-size:12.5px;
-    background:rgba(12,16,26,.94);border:1px solid rgba(160,185,235,.3);
-    color:#eaf1ff;opacity:0;pointer-events:none;
+    background:var(--card);border:1px solid var(--line2);
+    box-shadow:0 6px 20px -10px rgba(35,38,44,.45);
+    color:var(--ink);opacity:0;pointer-events:none;
     transition:opacity .2s,transform .2s;z-index:99;max-width:86vw;text-align:center;
   }
   .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* 矮屏（iPhone SE / 小屏安卓）：再压一轮，保证四个按钮不用滚就看得见 */
+  @media (max-height:720px){
+    body{padding-top:10px;padding-bottom:16px}
+    .intro{margin-bottom:10px}
+    .stage{height:min(48vh,124vw,460px);height:min(48dvh,124vw,460px)}
+    .rheostat{margin-top:9px;height:66px}
+    .status{margin-top:8px}
+    .controls{margin-top:10px}
+    .foot{display:none}
+  }
+  /* 极矮屏（横屏手机）：直接把舞台压扁，别让按钮掉出屏幕 */
+  @media (max-height:560px){
+    .stage{height:min(42vh,150vw,320px);height:min(42dvh,150vw,320px)}
+    .quip,.foot{display:none}
+  }
 </style>
 </head>
 <body>
@@ -376,8 +399,6 @@
   <div class="controls">
     <button class="btn" id="btnReset">↺ 复位</button>
     <button class="btn" id="btnShare">📤 分享</button>
-  </div>
-  <div class="toggles">
     <button class="tg on" id="tgSound">🔊 音效</button>
     <button class="tg" id="tgDanmu">💬 弹幕</button>
   </div>
@@ -1524,12 +1545,21 @@ var QRLib = (function () {
     if (e.key === "Escape" && sheet.classList.contains("on")) closeSheet();
   });
 
-  /* ================= 音效 + 震动（零素材，WebAudio 合成） ================= */
+  /* ================= 音效 + 震动（零素材，WebAudio 合成） =================
+     默认状态固定为：**音效开、弹幕关**。
+     老设备浏览器里可能留着以前点过的偏好，所以用 bs.pv 做一次版本迁移：
+     没有这个版本号的，把两个开关清回默认值，保证"刚进去"看到的就是这个状态。 */
+  const PREF_VER = "2";
+  if (localStorage.getItem("bs.pv") !== PREF_VER) {
+    localStorage.removeItem("bs.sound");
+    localStorage.removeItem("bs.danmu");
+    localStorage.setItem("bs.pv", PREF_VER);
+  }
   let actx = null;
   const pref = {
-    get sound() { return localStorage.getItem("bs.sound") !== "0"; },
+    get sound() { return localStorage.getItem("bs.sound") !== "0"; },   /* 默认开 */
     set sound(v) { localStorage.setItem("bs.sound", v ? "1" : "0"); },
-    get danmu() { return localStorage.getItem("bs.danmu") === "1"; },
+    get danmu() { return localStorage.getItem("bs.danmu") === "1"; },   /* 默认关 */
     set danmu(v) { localStorage.setItem("bs.danmu", v ? "1" : "0"); }
   };
 
