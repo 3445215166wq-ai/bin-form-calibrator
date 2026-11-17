@@ -110,8 +110,8 @@
     display:flex;align-items:center;gap:8px;
     font-size:12px;font-weight:800;letter-spacing:.05em;color:#fff;
     padding:4px 10px 4px 9px;border-radius:99px;
-    background:rgba(20,22,26,.42);
-    -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+    /* 不用 backdrop-filter：它压在每帧都在变的视频上，手机端每帧都要重新取样模糊，是主要卡顿源 */
+    background:rgba(18,20,25,.62);
     text-shadow:0 1px 3px rgba(0,0,0,.6);
   }
   .tag i{flex:0 0 11px;width:11px;height:2px;border-radius:1px;display:block;
@@ -122,8 +122,7 @@
     position:absolute;right:10px;bottom:10px;z-index:4;
     width:30px;height:30px;padding:0;border:0;border-radius:50%;
     display:grid;place-items:center;cursor:pointer;
-    background:rgba(20,22,26,.42);
-    -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+    background:rgba(18,20,25,.62);   /* 同样不用 backdrop-filter */
     transition:background .16s,transform .12s;
   }
   .snd:active{transform:scale(.94)}
@@ -1169,8 +1168,13 @@ function gradColors(t) {
     });
   })();
 
+  /* 低端设备（核数少 / 小屏）自动降配：分辨率减半、片数减半 */
+  const fxLowEnd = (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4)
+                || Math.min(window.innerWidth, window.innerHeight) < 420;
+
   function resizeFx() {
-    const dpr = Math.min(1.5, window.devicePixelRatio || 1);   /* 撒花不用满分辨率 */
+    const cap = fxLowEnd ? 1 : 1.25;             /* 撒花不需要满分辨率 */
+    const dpr = Math.min(cap, window.devicePixelRatio || 1);
     fxDpr = dpr;
     fxW = Math.max(1, window.innerWidth);
     fxH = Math.max(1, window.innerHeight);
@@ -1181,9 +1185,9 @@ function gradColors(t) {
     fxc.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
-  /* 片数按视口面积算；手机上大概 60~90 片 */
+  /* 片数按视口面积算；手机上大概 40~90 片 */
   function fxTarget() {
-    return Math.max(56, Math.min(150, Math.round(fxW * fxH / 5200)));
+    return Math.max(40, Math.min(150, Math.round(fxW * fxH / (fxLowEnd ? 8000 : 5200))));
   }
 
   function fxMake(y) {
@@ -1204,8 +1208,9 @@ function gradColors(t) {
   }
 
   function fxStep(t) {
-    /* 纸屑飘得慢，30fps 完全够看；省下的预算留给视频擦洗 */
-    if (t - fxDrawAt < 30) { requestAnimationFrame(fxStep); return; }
+    /* 纸屑飘得慢，帧率压低完全够看；省下的预算留给视频擦洗。
+       低端设备再退一档（24fps）。 */
+    if (t - fxDrawAt < (fxLowEnd ? 41 : 30)) { requestAnimationFrame(fxStep); return; }
     const dt = Math.min(0.06, ((t - fxLast) / 1000) || 0.016);
     fxLast = t; fxDrawAt = t;
     fxc.clearRect(0, 0, fxW, fxH);
@@ -2272,6 +2277,17 @@ var QRLib = (function () {
 
   /* 浏览器要求有用户手势才能出声：第一次按下时预加载现场人声，等拖到夺冠档就不必再等 */
   window.addEventListener("pointerdown", () => { loadCrowd(); updateCrowd(); }, { once: true });
+
+  /* 切到后台就停掉撒花的 rAF（手机省电，回来再续上） */
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      fxRunning = false;
+    } else if (fxOn && !fxRunning) {
+      fxRunning = true;
+      fxLast = performance.now();
+      requestAnimationFrame(fxStep);
+    }
+  });
 
   /* ================= 档位切换时的反馈：音阶 + 震动 + 一条弹幕 + 现场人声 ================= */
   function onTierChange(tier) {
