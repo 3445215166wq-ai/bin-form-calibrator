@@ -82,8 +82,13 @@
 
   /* 视频模式：视频藏在画面外，只把解码出来的当前帧画到 canvas */
   #cv{position:absolute;inset:0;z-index:1;width:100%;height:100%;display:none}
-  /* 撒花层：压在画面上、在档位标签和弹幕之下，不吃点击 */
-  #fx{position:absolute;inset:0;z-index:3;width:100%;height:100%;pointer-events:none}
+  /* 撒花层：全屏固定，压在页面内容之上、弹窗/提示之下，不吃点击 */
+  #fx{
+    position:fixed;inset:0;width:100%;height:100%;
+    z-index:60;pointer-events:none;
+    opacity:0;transition:opacity .5s ease;
+  }
+  #fx.on{opacity:1}
   .stage.video #cv{display:block}
   .stage.video #layers{display:none}
   #vid{position:absolute;left:-9999px;top:0;width:2px;height:2px;opacity:0;pointer-events:none}
@@ -423,7 +428,6 @@
     <div id="layers"></div>
     <canvas id="cv"></canvas>
     <video id="vid" muted playsinline preload="auto"></video>
-    <canvas id="fx"></canvas>
     <div class="danmu" id="danmu"></div>
     <div class="tag"><i></i><span id="tag">稚嫩 bin 哥</span></div>
     <div class="loading" id="loading">高清素材加载中…</div>
@@ -457,6 +461,7 @@
   <p class="foot">纯属娱乐二创 · 与选手本人及战队无关<br>← → 也能拨，Home / End 到头</p>
 </div>
 <div class="toast" id="toast"></div>
+<canvas id="fx"></canvas>
 
 <!-- 分享预览：确认后才保存 -->
 <div class="sheet" id="sheet" aria-hidden="true" role="dialog" aria-label="分享预览">
@@ -1070,22 +1075,24 @@ function gradColors(t) {
     render();
   });
 
-  /* ================= 撒花（夺冠档） =================
-     独立一层 canvas 叠在画面上，和视频擦洗那张 canvas 完全解耦。
-     要点：①纸屑先用离屏 canvas 预渲染成贴图，每帧只 drawImage，不重画路径；
-     ②对象池复用、落出画面即回收；③只在夺冠档开启，离开就停止生成、等最后几片落完自动停 rAF。 */
+  /* ================= 撒花（夺冠档 · 全屏循环飘） =================
+     一整层**全屏固定** canvas（position:fixed，压在页面内容之上、弹窗之下），
+     所以纸屑会飘过标题、按钮、滑条，不只是压在照片上。
+     要点：①纸屑用离屏 canvas 预渲染成贴图，每帧只 drawImage；
+     ②进入夺冠档时把全屏铺满（从各种高度开始，不会"从空屏慢慢下"）；
+     ③落到底部就回到顶部、随机换一列 —— 所以是**一直循环飘**，不是喷一波；
+     ④离开夺冠档停止循环，等最后几片落完自动停 rAF。 */
   const FX_TIER = 5;                       /* 夺冠！意气风发！ */
   const fxEl = document.getElementById("fx");
   const fxc  = fxEl.getContext("2d");
-  const FX_MAX = 150;
   const FX_PARTS = [];
   const FX_SPRITES = [];
-  let fxW = 0, fxH = 0, fxDpr = 1, fxOn = false, fxRunning = false, fxAcc = 0, fxLast = 0;
+  let fxW = 1, fxH = 1, fxDpr = 1, fxOn = false, fxRunning = false, fxLast = 0, fxStopAt = 0, fxDrawAt = 0;
   const fxReduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches);
 
   (function buildSprites() {
     const colors = ["#f0447f", "#ff86b4", "#2d63e0", "#6aa8ff", "#ffffff", "#dfe6f5", "#a45ae8"];
-    const sizes = [[11, 6], [8, 8], [14, 5], [7, 11]];
+    const sizes = [[9, 5], [7, 7], [11, 4], [6, 9]];
     colors.forEach(function (col) {
       sizes.forEach(function (sz) {
         const pad = 2, w = sz[0], h = sz[1], r = Math.min(w, h) / 2;
@@ -1106,79 +1113,88 @@ function gradColors(t) {
   })();
 
   function resizeFx() {
-    const r = stage.getBoundingClientRect();
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const dpr = Math.min(1.5, window.devicePixelRatio || 1);   /* 撒花不用满分辨率 */
     fxDpr = dpr;
-    fxW = Math.max(1, Math.round(r.width));
-    fxH = Math.max(1, Math.round(r.height));
+    fxW = Math.max(1, window.innerWidth);
+    fxH = Math.max(1, window.innerHeight);
     const bw = Math.round(fxW * dpr), bh = Math.round(fxH * dpr);
     if (fxEl.width !== bw || fxEl.height !== bh) {
       fxEl.width = bw; fxEl.height = bh;
-      fxc.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
+    fxc.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
-  function fxSpawn(n) {
-    for (let k = 0; k < n; k++) {
-      if (FX_PARTS.length >= FX_MAX) return;
-      const s = FX_SPRITES[(Math.random() * FX_SPRITES.length) | 0];
-      FX_PARTS.push({
-        s: s,
-        x: Math.random() * fxW,
-        y: -s.h - Math.random() * fxH * 0.35,
-        vx: (Math.random() - 0.5) * 22,
-        vy: 55 + Math.random() * 95,
-        rot: Math.random() * 6.283,
-        vr: (Math.random() - 0.5) * 7,
-        sw: Math.random() * 6.283,
-        sws: 1.1 + Math.random() * 1.7,
-        a: 0.72 + Math.random() * 0.28
-      });
-    }
+  /* 片数按视口面积算；手机上大概 60~90 片 */
+  function fxTarget() {
+    return Math.max(56, Math.min(150, Math.round(fxW * fxH / 5200)));
+  }
+
+  function fxMake(y) {
+    const s = FX_SPRITES[(Math.random() * FX_SPRITES.length) | 0];
+    const d = 0.65 + Math.random() * 0.7;            /* 远近：影响大小、速度、透明度 */
+    return {
+      s: s, d: d,
+      x: Math.random() * fxW,
+      y: y,
+      vx: (Math.random() - 0.5) * 14 * d,
+      vy: (20 + Math.random() * 26) * d,             /* 慢：约 20~46 px/s */
+      rot: Math.random() * 6.283,
+      vr: (Math.random() - 0.5) * 2.4,
+      sw: Math.random() * 6.283,
+      sws: 0.7 + Math.random() * 1.1,
+      a: 0.55 + 0.45 * d
+    };
   }
 
   function fxStep(t) {
-    const dt = Math.min(0.05, ((t - fxLast) / 1000) || 0.016);
-    fxLast = t;
+    /* 纸屑飘得慢，30fps 完全够看；省下的预算留给视频擦洗 */
+    if (t - fxDrawAt < 30) { requestAnimationFrame(fxStep); return; }
+    const dt = Math.min(0.06, ((t - fxLast) / 1000) || 0.016);
+    fxLast = t; fxDrawAt = t;
     fxc.clearRect(0, 0, fxW, fxH);
     for (let i = FX_PARTS.length - 1; i >= 0; i--) {
       const p = FX_PARTS[i];
-      p.vy += 230 * dt;                            /* 重力 */
       p.sw += p.sws * dt;
-      p.x += (p.vx + Math.sin(p.sw) * 30) * dt;    /* 左右飘 */
+      p.x += (p.vx + Math.sin(p.sw) * 13 * p.d) * dt;   /* 左右荡 */
       p.y += p.vy * dt;
       p.rot += p.vr * dt;
-      if (p.y > fxH + 40 || p.x < -60 || p.x > fxW + 60) { FX_PARTS.splice(i, 1); continue; }
-      /* 用 setTransform 直接拼矩阵：比 save/translate/rotate/scale/restore 少四次调用 */
+      if (p.y > fxH + 24) {
+        if (fxOn) { p.y = -24; p.x = Math.random() * fxW; p.sw = Math.random() * 6.283; }
+        else { FX_PARTS.splice(i, 1); continue; }
+      }
+      if (p.x < -30) p.x = fxW + 20;
+      else if (p.x > fxW + 30) p.x = -20;
+      /* setTransform 直接拼矩阵，比 save/translate/rotate/scale/restore 少四次调用 */
       const cs = Math.cos(p.rot), sn = Math.sin(p.rot);
-      const sx = fxDpr, sy = fxDpr * (0.25 + 0.75 * Math.abs(Math.cos(p.sw * 1.6)));  /* 纸片翻面 */
+      const sx = fxDpr * p.d, sy = fxDpr * p.d * (0.3 + 0.7 * Math.abs(Math.cos(p.sw * 1.5)));
       fxc.globalAlpha = p.a;
       fxc.setTransform(cs * sx, sn * sx, -sn * sy, cs * sy, p.x * fxDpr, p.y * fxDpr);
       fxc.drawImage(p.s.cv, -p.s.w / 2, -p.s.h / 2);
     }
     fxc.globalAlpha = 1;
     fxc.setTransform(fxDpr, 0, 0, fxDpr, 0, 0);
-    if (fxOn && !fxReduced) {
-      fxAcc += dt;
-      const every = 0.045;
-      while (fxAcc > every) { fxAcc -= every; fxSpawn(1); }
+    /* 离档后不再循环：等淡出过渡走完就清干净收工（不靠"自然落完"，那要几十秒） */
+    if (!fxOn && fxStopAt && t > fxStopAt) {
+      FX_PARTS.length = 0;
+      fxStopAt = 0;
     }
-    if (FX_PARTS.length || (fxOn && !fxReduced)) {
-      requestAnimationFrame(fxStep);
-    } else {
-      fxRunning = false;
-      fxc.clearRect(0, 0, fxW, fxH);
-    }
+    if (FX_PARTS.length) requestAnimationFrame(fxStep);
+    else { fxRunning = false; fxc.clearRect(0, 0, fxW, fxH); }
   }
 
   function fxConfetti(on) {
     if (on === fxOn) return;
     fxOn = on;
+    fxEl.classList.toggle("on", on);
     if (on) {
+      fxStopAt = 0;
       resizeFx();
-      fxAcc = 0;
-      fxSpawn(fxReduced ? 20 : 70);                /* 刚进夺冠档先喷一波 */
+      const n = fxReduced ? 26 : fxTarget();
+      /* 一进来就铺满整屏（高度随机），不是从顶上慢慢下 */
+      for (let i = 0; i < n; i++) FX_PARTS.push(fxMake(Math.random() * fxH));
       if (!fxRunning) { fxRunning = true; fxLast = performance.now(); requestAnimationFrame(fxStep); }
+    } else if (fxRunning) {
+      fxStopAt = performance.now() + 540;          /* 和 CSS 的 opacity .5s 对齐 */
     }
   }
 
